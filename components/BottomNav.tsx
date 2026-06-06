@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const ITEMS = [
   { href: "/", label: "Home", icon: HomeIcon },
   { href: "/deals", label: "Deals", icon: DealsIcon },
+  { href: "/capture", label: "Capture", icon: CaptureIcon },
   { href: "/deals/new", label: "Add", icon: AddIcon },
 ];
 
@@ -16,8 +17,7 @@ export function BottomNav() {
     <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-hairline bg-bg/90 backdrop-blur">
       <div className="mx-auto flex max-w-md items-stretch justify-around px-2 pb-[env(safe-area-inset-bottom)]">
         {ITEMS.map(({ href, label, icon: Icon }) => {
-          const active =
-            href === "/" ? pathname === "/" : pathname.startsWith(href);
+          const active = isActive(pathname, href);
           return (
             <Link
               key={href}
@@ -33,6 +33,27 @@ export function BottomNav() {
         })}
       </div>
     </nav>
+  );
+}
+
+function isActive(pathname: string, href: string): boolean {
+  if (href === "/") return pathname === "/";
+  if (href === "/deals/new") return pathname === "/deals/new";
+  if (href === "/deals") {
+    return pathname === "/deals" || pathname.startsWith("/deals/")
+      ? pathname !== "/deals/new"
+      : false;
+  }
+  return pathname.startsWith(href);
+}
+
+function CaptureIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 7h16M4 12h10M4 17h7" />
+      <circle cx="18.5" cy="16.5" r="3" />
+      <path d="M20.7 18.7 23 21" />
+    </svg>
   );
 }
 

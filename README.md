@@ -8,7 +8,33 @@ coaching — with you approving anything that leaves the system.
 
 ---
 
-## Where we are: Phase 0 ✅
+## Where we are: Phase 1 ✅
+
+Paste a real call/meeting transcript and the app turns it into a deal, a useful
+AI analysis (summary, sentiment, talk-ratio, 7 call scores, what went
+well/wrong, coaching), and **draft follow-ups you can copy**. Nothing is sent to
+email or calendar yet — that comes in Phases 2–3.
+
+**To use Phase 1 you need an Anthropic API key:**
+
+1. Go to https://console.anthropic.com → **Settings → API Keys → Create Key**.
+   Copy the key (starts with `sk-ant-`).
+2. Open `.env.local` and paste it after `ANTHROPIC_API_KEY=`.
+3. On Vercel, add the same `ANTHROPIC_API_KEY` under
+   Project → Settings → Environment Variables, then redeploy.
+4. Restart `npm run dev`.
+
+**Try it:** tap **Capture** (bottom bar) → paste a transcript → **Analyze
+transcript**. In ~10–20s you land on the deal with its analysis and copyable
+drafts. If the AI output is ever malformed, the transcript is saved and flagged
+for review and nothing is acted on — you'll see why.
+
+> Models used: `claude-haiku-4-5` for extraction (cheap) and `claude-sonnet-4-6`
+> for writing the personalized follow-ups (Section 7 of SPEC.md).
+
+---
+
+## Phase 0 ✅
 
 This phase is the skeleton everything else builds on:
 
@@ -131,24 +157,38 @@ password from Step 4.
 
 ```
 app/
-  (app)/            screens you see after logging in (dashboard, deals, add, detail)
+  (app)/            screens you see after logging in (dashboard, deals, capture, detail)
   login/            sign-in screen
   auth/signout/     sign-out endpoint
-components/         reusable UI (cards, badges, bottom nav, voice bar)
+components/         reusable UI (cards, badges, bottom nav, draft cards)
 lib/
+  ai/               Anthropic calls + the strict Section 7 schema (extract, write)
   supabase/         database connection helpers
+  pipeline.ts       transcript → analysis → deal/drafts pipeline (Section 6)
+  match.ts          identity-resolution ladder (Section 8)
   types.ts          shared data types
   format.ts         money/date formatting
 supabase/
   migrations/       the SQL that builds your database
+tests/              sanity tests (AI parsing, matching)
 public/             PWA manifest, icons, service worker
 SPEC.md             the full project brief (source of truth)
 ```
 
 ---
 
-## What's next — Phase 1
+## What's next — Phase 2
 
-Paste a real call transcript and get a genuinely useful AI analysis (summary,
-scores, talk-ratio) plus a draft follow-up you can copy. That phase adds your
-`ANTHROPIC_API_KEY`. We'll do it when you say "go".
+The approval queue: AI-proposed emails / SMS / calendar events show up in a
+"To approve" screen as editable drafts in a popup. You edit and tap ✓ to approve
+them (still nothing leaves the system until Phase 3). We'll do it when you say
+"go".
+
+## Running the tests
+
+```bash
+npm test
+```
+
+Sanity tests cover the risky parts (Section 3): AI-output Zod validation, JSON
+extraction from messy model replies, and the matching ladder.
