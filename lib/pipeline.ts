@@ -99,7 +99,7 @@ export async function runPipeline(
   // Update the deal from the analysis.
   await applyDealUpdate(supabase, dealId, data);
 
-  // Persist generated drafts.
+  // Persist generated drafts (content the user can read/copy on the deal).
   if (drafts.length > 0) {
     await supabase.from("drafts").insert(
       drafts.map((d) => ({
@@ -113,7 +113,82 @@ export async function runPipeline(
     );
   }
 
+  // 5. Queue actions — everything that MAY leave the system goes into
+  // actions_queue as `proposed`. Nothing is sent yet (approval is Phase 2,
+  // Google push is Phase 3). Idempotency keys are deterministic so a retry
+  // never duplicates.
+  await enqueueActions(supabase, {
+    dealId,
+    appointmentId,
+    drafts,
+    proposedEvent: data.proposed_event,
+  });
+
   return { ok: true, dealId, appointmentId, created, matchedBy };
+}
+
+async function enqueueActions(
+  supabase: SupabaseClient,
+  args: {
+    dealId: string;
+    appointmentId: string;
+    drafts: Draft[];
+    proposedEvent: Extraction["proposed_event"];
+  },
+) {
+  const { dealId, appointmentId, drafts, proposedEvent } = args;
+
+  const { data: contact } = await supabase
+    .from("deals")
+    .select("email, phone")
+    .eq("id", dealId)
+    .single();
+
+  const rows: {
+    deal_id: string;
+    kind: "email" | "sms" | "calendar_event";
+    payload: Record<string, unknown>;
+    status: string;
+    idempotency_key: string;
+  }[] = [];
+
+  drafts.forEach((d, i) => {
+    const kind = d.channel === "email" ? "email" : "sms";
+    const payload =
+      kind === "email"
+        ? { subject: d.subject ?? "", body: d.body, to: contact?.email ?? null, draft_type: d.type }
+        : { body: d.body, to: contact?.phone ?? null, draft_type: d.type };
+    rows.push({
+      deal_id: dealId,
+      kind,
+      payload,
+      status: "proposed",
+      idempotency_key: `${appointmentId}-msg-${i}`,
+    });
+  });
+
+  if (proposedEvent) {
+    rows.push({
+      deal_id: dealId,
+      kind: "calendar_event",
+      payload: {
+        title: proposedEvent.title,
+        start: proposedEvent.start,
+        location: proposedEvent.location ?? "",
+        notes: proposedEvent.notes ?? "",
+      },
+      status: "proposed",
+      idempotency_key: `${appointmentId}-event`,
+    });
+  }
+
+  if (rows.length > 0) {
+    // Ignore conflicts so a re-run with the same keys is a no-op.
+    await supabase.from("actions_queue").upsert(rows, {
+      onConflict: "idempotency_key",
+      ignoreDuplicates: true,
+    });
+  }
 }
 
 async function resolveDeal(
