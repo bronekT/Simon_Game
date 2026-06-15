@@ -13,6 +13,7 @@ interface Appointment {
   id: string;
   created_at: string;
   record_type: string | null;
+  location_type: string | null;
   summary: string | null;
   sentiment: string | null;
   talk_ratio: number | null;
@@ -29,9 +30,24 @@ interface Appointment {
     coach_note?: string;
     objections?: string[];
     budget_signal?: string | null;
+    personal_hooks?: string[];
+    proposed_event?: { title?: string; start?: string; location?: string } | null;
   } | null;
   needs_review: boolean;
 }
+
+const RECORD_LABEL: Record<string, string> = {
+  booking_call: "Booking call",
+  appointment: "Appointment",
+  followup_call: "Follow-up call",
+  note: "Note",
+};
+const LOCATION_LABEL: Record<string, string> = {
+  home: "At home",
+  showroom: "Showroom",
+  phone: "Phone",
+  virtual: "Virtual",
+};
 
 interface DraftRow {
   id: string;
@@ -111,22 +127,73 @@ export default async function DealDetail({
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">AI Analysis</h2>
-            <span className="text-xs text-muted">
-              {titleCase(appt.record_type)} · {dateTime(appt.created_at)}
-            </span>
+            <span className="text-xs text-muted">{dateTime(appt.created_at)}</span>
           </div>
 
           <Card>
-            {appt.summary && <p className="text-sm">{appt.summary}</p>}
-            <div className="mt-3 flex flex-wrap gap-2 text-xs">
-              {appt.sentiment && (
-                <Pill>Sentiment: {appt.sentiment}</Pill>
+            <div className="mb-2 flex flex-wrap gap-2 text-xs">
+              {appt.record_type && (
+                <span className="rounded-full bg-accent/15 px-2.5 py-0.5 font-medium text-accent">
+                  {RECORD_LABEL[appt.record_type] ?? titleCase(appt.record_type)}
+                </span>
               )}
-              {appt.talk_ratio != null && (
-                <Pill>You spoke {appt.talk_ratio}%</Pill>
+              {appt.location_type && (
+                <span className="rounded-full bg-task/15 px-2.5 py-0.5 font-medium text-task">
+                  {LOCATION_LABEL[appt.location_type] ?? titleCase(appt.location_type)}
+                </span>
               )}
             </div>
+            {appt.summary && <p className="text-sm">{appt.summary}</p>}
+            <div className="mt-3 flex flex-wrap gap-2 text-xs">
+              {appt.sentiment && <Pill>Sentiment: {appt.sentiment}</Pill>}
+              {appt.talk_ratio != null && <Pill>You spoke {appt.talk_ratio}%</Pill>}
+              {appt.analysis?.budget_signal && <Pill>Budget: {appt.analysis.budget_signal}</Pill>}
+            </div>
           </Card>
+
+          {/* Proposed meeting (booking calls / next visits) */}
+          {appt.analysis?.proposed_event?.start && (
+            <Card className="border-task/30">
+              <p className="text-xs font-semibold text-task">Proposed meeting</p>
+              <p className="mt-1 text-sm">{appt.analysis.proposed_event.title ?? "Visit"}</p>
+              <p className="mt-0.5 text-xs text-muted">
+                {dateTime(appt.analysis.proposed_event.start)}
+                {appt.analysis.proposed_event.location
+                  ? ` · ${appt.analysis.proposed_event.location}`
+                  : ""}
+              </p>
+              <p className="mt-2 text-xs text-muted">
+                Review &amp; add it from the <span className="text-accent">Approve</span> tab.
+              </p>
+            </Card>
+          )}
+
+          {/* Objections + personal hooks */}
+          {((appt.analysis?.objections?.length ?? 0) > 0 ||
+            (appt.analysis?.personal_hooks?.length ?? 0) > 0) && (
+            <Card>
+              {(appt.analysis?.objections?.length ?? 0) > 0 && (
+                <div className="mb-3">
+                  <p className="mb-1.5 text-xs font-semibold text-risk">Objections</p>
+                  <div className="flex flex-wrap gap-2">
+                    {appt.analysis!.objections!.map((o, i) => (
+                      <span key={i} className="rounded-full bg-risk/10 px-2.5 py-0.5 text-xs text-text">{o}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {(appt.analysis?.personal_hooks?.length ?? 0) > 0 && (
+                <div>
+                  <p className="mb-1.5 text-xs font-semibold text-accent">Personal hooks</p>
+                  <div className="flex flex-wrap gap-2">
+                    {appt.analysis!.personal_hooks!.map((h, i) => (
+                      <span key={i} className="rounded-full bg-accent/10 px-2.5 py-0.5 text-xs text-text">{h}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Card>
+          )}
 
           <ScoreGrid appt={appt} />
 
@@ -149,7 +216,7 @@ export default async function DealDetail({
                 </div>
               )}
               {appt.analysis?.coach_note && (
-                <p className="mt-3 border-t border-hairline pt-3 text-sm italic text-muted">
+                <p className="mt-3 whitespace-pre-line border-t border-hairline pt-3 text-sm italic text-muted">
                   Coach: {appt.analysis.coach_note}
                 </p>
               )}

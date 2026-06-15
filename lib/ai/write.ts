@@ -25,7 +25,11 @@ Guidance:
 - Address the strongest objection and any competitor concern.
 - SMS: no subject (use ""), under ~320 characters, friendly and direct.
 - Sign emails with the provided email signature when available.
-- coach_note: 1–2 sentences of concrete, kind coaching for next time.`;
+- coach_note: concrete, kind, SPECIFIC coaching for next time. Write 2–3 short
+  lines, each a single actionable point tied to THIS call (e.g. "You jumped to
+  price before establishing value — next time, anchor the warranty first."). No
+  generic platitudes. If the call clearly went well, still give one sharpening
+  tip. Keep it encouraging.`;
 
 // Reactivation draft for a dead lead (SPEC.md Phase 5). AI-written when a key is
 // present, otherwise a sensible template so automations work without AI.

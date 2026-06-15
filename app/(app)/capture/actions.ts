@@ -32,6 +32,12 @@ export async function processTranscript(form: FormData) {
 
   revalidatePath("/");
   revalidatePath("/deals");
+
+  // A pure note may not be attached to any deal — just confirm it was logged.
+  if (!result.dealId) {
+    redirect(`/capture?logged=note`);
+  }
+
   revalidatePath(`/deals/${result.dealId}`);
   redirect(`/deals/${result.dealId}?analyzed=1`);
 }

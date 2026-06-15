@@ -55,6 +55,9 @@ export default async function Dashboard() {
           <h1 className="text-2xl font-semibold">Today</h1>
         </div>
         <div className="flex items-center gap-4">
+          <Link href="/earnings" className="text-sm text-muted">
+            Earnings
+          </Link>
           <Link href="/coach" className="text-sm text-muted">
             Coach
           </Link>
@@ -85,28 +88,33 @@ export default async function Dashboard() {
         </Card>
       </div>
 
-      {/* Commission / OTE tracker */}
+      {/* Commission / OTE tracker — tap for the full Earnings view */}
       {(goal || myCommission != null) && (
-        <Card>
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-muted">
-              {myCommission != null ? "Your commission this month" : "Goal progress"}
-            </p>
-            {myCommission != null && (
-              <p className="text-sm font-semibold text-accent">{money(myCommission)}</p>
-            )}
-          </div>
-          {goalPct != null && (
-            <>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
-                <div className="h-full rounded-full bg-won" style={{ width: `${goalPct}%` }} />
-              </div>
-              <p className="mt-1 text-xs text-muted">
-                {goalPct}% of {money(goal)} goal
+        <Link href="/earnings">
+          <Card className="active:bg-white/[0.05]">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted">
+                {myCommission != null ? "Your commission this month" : "Goal progress"}
               </p>
-            </>
-          )}
-        </Card>
+              <div className="flex items-center gap-1.5">
+                {myCommission != null && (
+                  <p className="text-sm font-semibold text-accent">{money(myCommission)}</p>
+                )}
+                <span className="text-muted">›</span>
+              </div>
+            </div>
+            {goalPct != null && (
+              <>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
+                  <div className="h-full rounded-full bg-won" style={{ width: `${goalPct}%` }} />
+                </div>
+                <p className="mt-1 text-xs text-muted">
+                  {goalPct}% of {money(goal)} goal
+                </p>
+              </>
+            )}
+          </Card>
+        </Link>
       )}
 
       {/* At-risk alerts */}

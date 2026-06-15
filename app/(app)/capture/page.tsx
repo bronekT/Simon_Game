@@ -9,9 +9,9 @@ export const dynamic = "force-dynamic";
 export default async function Capture({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; logged?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, logged } = await searchParams;
 
   const supabase = await createClient();
   const { data } = await supabase
@@ -25,10 +25,21 @@ export default async function Capture({
       <header className="pt-2">
         <h1 className="text-2xl font-semibold">Capture</h1>
         <p className="mt-1 text-sm text-muted">
-          Paste a call or meeting transcript. The AI turns it into a deal,
-          analysis, and draft follow-ups.
+          Paste a call or meeting transcript. The AI works out what it is — a
+          booking call, a full appointment, a follow-up, or just a note — and
+          handles each correctly.
         </p>
       </header>
+
+      {logged === "note" && (
+        <Card className="border-won/40">
+          <p className="text-sm text-won">Logged as a note ✓</p>
+          <p className="mt-1 text-xs text-muted">
+            The AI decided this had no sales content, so it was just saved — no
+            deal changes, scores, or follow-ups created.
+          </p>
+        </Card>
+      )}
 
       <form action={processTranscript} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1.5">

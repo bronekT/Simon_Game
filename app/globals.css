@@ -13,10 +13,31 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 /* Larger default tap targets and no tap highlight (mobile-first, Section 10). */
 button,
 a {
   -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s ease, transform 0.12s ease, background-color 0.15s ease;
+}
+button:active {
+  transform: scale(0.97);
+}
+
+/* Crisp accent focus ring for keyboard users, without disturbing touch UX. */
+:focus-visible {
+  outline: 2px solid #e9a23b;
+  outline-offset: 2px;
+}
+
+/* Inputs feel tappable and consistent */
+input,
+select,
+textarea {
+  font-size: 16px; /* prevents iOS zoom-on-focus */
 }
 
 /* Inputs inherit the dark theme */

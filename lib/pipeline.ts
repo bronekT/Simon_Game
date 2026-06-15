@@ -6,7 +6,7 @@ import { chooseMatch, type DealCandidate } from "./match";
 import type { DealStatus } from "./types";
 
 export type PipelineResult =
-  | { ok: true; dealId: string; appointmentId: string; created: boolean; matchedBy: string }
+  | { ok: true; dealId: string | null; appointmentId: string; created: boolean; matchedBy: string; recordType: string }
   | { ok: false; appointmentId: string; error: string };
 
 // SPEC.md Section 6 — the reliable pipeline. Phase 1 runs steps 1–4 (ingest,
@@ -52,19 +52,23 @@ export async function runPipeline(
     return { ok: false, appointmentId, error: result.error };
   }
   const data = result.data;
+  const isNote = data.record_type === "note";
 
-  // 2 (match). Resolve which deal this belongs to.
+  // 2 (match). Resolve which deal this belongs to. A pure "note" is just logged:
+  // we never create a brand-new deal for it (only attach if it clearly matches).
   const { dealId, created, matchedBy } = await resolveDeal(
     supabase,
     data,
     attachDealId,
     userId,
+    !isNote, // createIfMissing
   );
 
-  // 4 (branch). Polished drafts + coaching for appointments (Sonnet).
-  let drafts: Draft[] = data.drafts;
+  // 4 (branch by record_type).
+  let drafts: Draft[] = isNote ? [] : data.drafts;
   let coachNote = "";
   if (data.record_type === "appointment") {
+    // Full analysis path: polished follow-ups + coaching (Sonnet).
     const writer = await writeFollowups(data, settings);
     if (writer.drafts.length > 0) drafts = writer.drafts;
     coachNote = writer.coach_note;
@@ -100,6 +104,11 @@ export async function runPipeline(
     })
     .eq("id", appointmentId);
 
+  // A "note" is just logged — no deal changes, no drafts, no queued actions.
+  if (isNote || !dealId) {
+    return { ok: true, dealId, appointmentId, created, matchedBy, recordType: data.record_type };
+  }
+
   // Update the deal from the analysis.
   await applyDealUpdate(supabase, dealId, data);
 
@@ -130,7 +139,7 @@ export async function runPipeline(
     proposedEvent: data.proposed_event,
   });
 
-  return { ok: true, dealId, appointmentId, created, matchedBy };
+  return { ok: true, dealId, appointmentId, created, matchedBy, recordType: data.record_type };
 }
 
 async function enqueueActions(
@@ -206,7 +215,8 @@ async function resolveDeal(
   data: Extraction,
   attachDealId: string | null,
   userId: string,
-): Promise<{ dealId: string; created: boolean; matchedBy: string }> {
+  createIfMissing: boolean,
+): Promise<{ dealId: string | null; created: boolean; matchedBy: string }> {
   // Human-in-the-loop: an explicit choice always wins.
   if (attachDealId) {
     return { dealId: attachDealId, created: false, matchedBy: "manual" };
@@ -224,6 +234,11 @@ async function resolveDeal(
   });
   if (match.kind === "phone") {
     return { dealId: match.dealId, created: false, matchedBy: "phone" };
+  }
+
+  // A note with no match stays unattached — don't spawn a junk deal.
+  if (!createIfMissing) {
+    return { dealId: null, created: false, matchedBy: "none" };
   }
 
   // Otherwise create a new deal (never attach on name alone).
