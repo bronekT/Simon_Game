@@ -301,3 +301,20 @@ alter table deals add column if not exists commission_paid boolean not null defa
 alter table deals add column if not exists door_type text;          -- entry / patio / storm / french / sliding / garage / interior / bifold / screen / other
 alter table deals add column if not exists door_count int;          -- how many doors
 alter table deals add column if not exists followup_sent_at timestamptz;  -- set when a follow-up email is approved/sent
+
+-- ============================================================
+-- supabase/migrations/0006_grants.sql
+-- ============================================================
+-- ============================================================================
+-- CLOSER — role grants
+-- Make sure Supabase's API roles can reach the public tables. Row-Level
+-- Security still controls WHICH rows each user sees; these grants just allow
+-- the roles to touch the tables at all (needed when the schema is created via
+-- the Management API rather than the SQL editor).
+-- ============================================================================
+
+grant usage on schema public to anon, authenticated, service_role;
+grant all privileges on all tables in schema public to anon, authenticated, service_role;
+grant all privileges on all sequences in schema public to anon, authenticated, service_role;
+alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
+alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
