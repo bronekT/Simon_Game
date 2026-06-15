@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/Card";
 import { SubmitButton } from "@/components/SubmitButton";
-import { saveSettings } from "./actions";
+import { saveSettings, generateWidgetToken } from "./actions";
 import { googleConfigured } from "@/lib/google/oauth";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +13,7 @@ export default async function Settings({
   searchParams: Promise<{ google?: string }>;
 }) {
   const { google: googleStatus } = await searchParams;
+  const appUrl = process.env.APP_URL ?? "http://localhost:3000";
   const supabase = await createClient();
 
   const { data: s } = await supabase.from("settings").select("*").maybeSingle();
@@ -67,6 +68,38 @@ export default async function Settings({
           )}
           {googleStatus === "connected" && (
             <p className="mt-2 text-xs text-won">Google connected.</p>
+          )}
+        </Card>
+      </section>
+
+      {/* Home-screen widget (Phase 5) */}
+      <section className="flex flex-col gap-2">
+        <h2 className="text-sm font-semibold text-muted">Home-screen widget</h2>
+        <Card>
+          {s?.widget_token ? (
+            <>
+              <p className="text-xs text-muted">
+                Read-only link for a Scriptable widget (top-3 moves, next
+                appointment, pipeline). Keep it private.
+              </p>
+              <p className="mt-2 break-all rounded-lg bg-white/5 p-2 text-xs">
+                {`${appUrl}/api/widget?token=${s.widget_token}`}
+              </p>
+              <form action={generateWidgetToken} className="mt-2">
+                <button className="rounded-full border border-hairline px-3 py-1.5 text-xs text-text">
+                  Regenerate (invalidates old link)
+                </button>
+              </form>
+            </>
+          ) : (
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm text-muted">No widget link yet.</p>
+              <form action={generateWidgetToken}>
+                <button className="rounded-full bg-accent px-4 py-1.5 text-xs font-medium text-bg">
+                  Generate link
+                </button>
+              </form>
+            </div>
           )}
         </Card>
       </section>

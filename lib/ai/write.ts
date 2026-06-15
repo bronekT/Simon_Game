@@ -27,6 +27,53 @@ Guidance:
 - Sign emails with the provided email signature when available.
 - coach_note: 1–2 sentences of concrete, kind coaching for next time.`;
 
+// Reactivation draft for a dead lead (SPEC.md Phase 5). AI-written when a key is
+// present, otherwise a sensible template so automations work without AI.
+export async function writeReactivation(
+  deal: { client_name: string | null; service_type: string | null; main_objection: string | null },
+  settings: SettingsContext,
+): Promise<{ subject: string; body: string }> {
+  const name = deal.client_name ?? "there";
+  const sig = settings.email_signature ?? settings.company_name ?? "";
+  const fallback = {
+    subject: `Still thinking about your ${deal.service_type ?? "project"}?`,
+    body: `Hi ${name},\n\nIt's been a while since we last spoke about your ${deal.service_type ?? "project"}. A lot can change with pricing and timing — I'd be happy to take a fresh look whenever you're ready, no pressure.\n\nWould a quick call this week work?\n\n${sig}`,
+  };
+
+  if (!process.env.ANTHROPIC_API_KEY) return fallback;
+
+  try {
+    const anthropic = getAnthropic();
+    const message = await anthropic.messages.create({
+      model: MODELS.write,
+      max_tokens: 800,
+      system:
+        "You write a single short, warm reactivation email to a lapsed sales lead (roofing/doors/exterior). Return ONLY JSON: {\"subject\":\"\",\"body\":\"\"}. No pressure, offer a fresh look, end with a soft question. Sign with the signature if provided.",
+      messages: [
+        {
+          role: "user",
+          content: JSON.stringify({
+            client_name: deal.client_name,
+            service_type: deal.service_type,
+            past_objection: deal.main_objection,
+            email_signature: settings.email_signature,
+            company_name: settings.company_name,
+          }),
+        },
+      ],
+    });
+    const json = extractJson(responseText(message));
+    if (!json) return fallback;
+    const parsed = JSON.parse(json);
+    if (typeof parsed.subject === "string" && typeof parsed.body === "string") {
+      return { subject: parsed.subject, body: parsed.body };
+    }
+    return fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 export async function writeFollowups(
   data: Extraction,
   settings: SettingsContext,

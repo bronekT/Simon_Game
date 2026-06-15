@@ -1,5 +1,6 @@
 "use server";
 
+import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
@@ -39,3 +40,19 @@ export async function saveSettings(form: FormData) {
   revalidatePath("/settings");
   revalidatePath("/");
 }
+
+// Generate (or rotate) the read-only token used by the home-screen widget.
+export async function generateWidgetToken() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const token = randomBytes(24).toString("hex");
+  await supabase
+    .from("settings")
+    .upsert({ user_id: user.id, widget_token: token }, { onConflict: "user_id" });
+  revalidatePath("/settings");
+}
+

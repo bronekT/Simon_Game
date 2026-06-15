@@ -5,6 +5,10 @@ export const metadata: Metadata = {
   title: "CLOSER",
   description: "Your personal AI Sales OS.",
   manifest: "/manifest.webmanifest",
+  icons: {
+    icon: "/icons/icon.svg",
+    apple: "/icons/icon.svg",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

@@ -8,6 +8,49 @@ coaching — with you approving anything that leaves the system.
 
 ---
 
+## Phase 5 ✅ — Automations, coaching, widget, PWA
+
+- **Daily automations** (`/api/cron/automations`): open deals with no activity for
+  3 days are flagged **at risk** (shown on the dashboard); leads dead for 30 days
+  get an AI **reactivation draft** queued for your approval.
+- **Commission / goal tracker** on the dashboard (uses your monthly goal +
+  commission % from Settings).
+- **Coach report** (`/coach`, link on the dashboard): win rate, average call
+  scores, your weakest skill to work on, and why deals were lost.
+- **Home-screen widget**: Settings → *Generate link* gives a read-only
+  `/api/widget?token=…` JSON endpoint (top-3 moves, next appointment, pipeline)
+  for a Scriptable widget.
+- **PWA finalized**: installable, standalone, app icon, theme color.
+
+**Setup:** run `supabase/migrations/0003_automations.sql`. The automations cron is
+already in `vercel.json` (daily); or schedule `/api/cron/automations` from
+Supabase the same way as ingestion. It reuses the same `CRON_SECRET`.
+
+> 🎉 **All five phases are built.** See "Connecting your accounts" below for the
+> one-time setup checklist.
+
+---
+
+## Connecting your accounts (one-time checklist)
+
+Everything is coded and committed — you just plug in your accounts when ready:
+
+1. **Supabase** (required): create a project, run all three migrations in order
+   (`0001`, `0002`, `0003`), paste the 3 keys into `.env.local` / Vercel, and
+   create your user (Phase 0 steps).
+2. **Anthropic** (required for AI): add `ANTHROPIC_API_KEY` (Phase 1).
+3. **Google** (optional — for Gmail drafts + Calendar): Google Cloud setup +
+   Connect in Settings (Phase 3).
+4. **Cron** (optional — for auto-ingestion + daily automations): set `CRON_SECRET`
+   and a Gmail label; schedule via Vercel (already in `vercel.json`) or Supabase
+   (Phase 4–5).
+5. **Deploy** to Vercel and add to your phone's home screen.
+
+Until you connect each one, the related buttons show a clear hint instead of
+failing — the rest of the app keeps working.
+
+---
+
 ## Phase 4 ✅ — Auto-ingestion + checklist/agenda
 
 - **Auto-ingestion:** a scheduled job reads new transcript emails from a Gmail

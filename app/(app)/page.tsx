@@ -17,12 +17,13 @@ export default async function Dashboard() {
 
   const { data: settings } = await supabase
     .from("settings")
-    .select("monthly_goal")
+    .select("monthly_goal, commission_self")
     .maybeSingle();
 
   const all = (deals ?? []) as Deal[];
   const open = all.filter((d) => OPEN_STATUSES.includes(d.status));
   const pipeline = open.reduce((sum, d) => sum + (d.quote_price ?? 0), 0);
+  const atRisk = open.filter((d) => (d as Deal & { at_risk?: boolean }).at_risk);
 
   const now = new Date();
   const wonThisMonth = all.filter(
@@ -33,6 +34,9 @@ export default async function Dashboard() {
   );
   const wonValue = wonThisMonth.reduce((s, d) => s + (d.quote_price ?? 0), 0);
   const goal = settings?.monthly_goal ?? null;
+  const commissionPct = settings?.commission_self ?? null;
+  const myCommission = commissionPct != null ? (wonValue * commissionPct) / 100 : null;
+  const goalPct = goal && goal > 0 ? Math.min(100, Math.round((wonValue / goal) * 100)) : null;
 
   // "Money Moves": open deals, highest probability first, then by quote value.
   const moneyMoves = [...open]
@@ -51,6 +55,9 @@ export default async function Dashboard() {
           <h1 className="text-2xl font-semibold">Today</h1>
         </div>
         <div className="flex items-center gap-4">
+          <Link href="/coach" className="text-sm text-muted">
+            Coach
+          </Link>
           <Link href="/settings" className="text-sm text-muted">
             Settings
           </Link>
@@ -77,6 +84,47 @@ export default async function Dashboard() {
           </p>
         </Card>
       </div>
+
+      {/* Commission / OTE tracker */}
+      {(goal || myCommission != null) && (
+        <Card>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted">
+              {myCommission != null ? "Your commission this month" : "Goal progress"}
+            </p>
+            {myCommission != null && (
+              <p className="text-sm font-semibold text-accent">{money(myCommission)}</p>
+            )}
+          </div>
+          {goalPct != null && (
+            <>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
+                <div className="h-full rounded-full bg-won" style={{ width: `${goalPct}%` }} />
+              </div>
+              <p className="mt-1 text-xs text-muted">
+                {goalPct}% of {money(goal)} goal
+              </p>
+            </>
+          )}
+        </Card>
+      )}
+
+      {/* At-risk alerts */}
+      {atRisk.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <h2 className="text-sm font-semibold text-risk">At risk ({atRisk.length})</h2>
+          {atRisk.slice(0, 3).map((d) => (
+            <Link key={d.id} href={`/deals/${d.id}`}>
+              <Card className="border-risk/30 active:bg-white/[0.05]">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="truncate text-sm">{d.client_name}</span>
+                  <span className="text-xs text-risk">No activity 3+ days</span>
+                </div>
+              </Card>
+            </Link>
+          ))}
+        </section>
+      )}
 
       {/* Money Moves */}
       <section className="flex flex-col gap-3">
