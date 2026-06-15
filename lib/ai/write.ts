@@ -1,6 +1,7 @@
 import { getAnthropic, MODELS, responseText, extractJson } from "./anthropic";
 import { WriterSchema, type Extraction, type WriterOutput } from "./schema";
 import type { SettingsContext } from "./extract";
+import { companyKnowledge } from "../knowledge/company";
 
 // SPEC.md Section 7: for an `appointment`, generate personalized follow-up drafts
 // and coaching from the summary + hooks (NOT the full transcript again — cost
@@ -54,7 +55,8 @@ export async function writeReactivation(
       model: MODELS.write,
       max_tokens: 800,
       system:
-        "You write a single short, warm reactivation email to a lapsed door-sales lead (entry/patio/storm/French/sliding/garage/interior doors). Return ONLY JSON: {\"subject\":\"\",\"body\":\"\"}. No pressure, reference the door type if known, offer a fresh look/quote, end with a soft question. Sign with the signature if provided.",
+        `${companyKnowledge()}\n\n` +
+        "You write a single short, warm reactivation email to a lapsed door-sales lead. Return ONLY JSON: {\"subject\":\"\",\"body\":\"\"}. No pressure, reference the door type if known, offer a fresh look/quote, end with a soft question. Sign with the signature if provided.",
       messages: [
         {
           role: "user",
@@ -109,7 +111,7 @@ export async function writeFollowups(
     const message = await anthropic.messages.create({
       model: MODELS.write,
       max_tokens: 2000,
-      system: SYSTEM,
+      system: `${companyKnowledge()}\n\n${SYSTEM}`,
       messages: [{ role: "user", content: brief }],
     });
     const json = extractJson(responseText(message));

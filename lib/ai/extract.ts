@@ -1,5 +1,6 @@
 import { getAnthropic, MODELS, responseText, extractJson } from "./anthropic";
 import { ExtractionSchema, type Extraction } from "./schema";
+import { companyKnowledge } from "../knowledge/company";
 
 export interface SettingsContext {
   company_name: string | null;
@@ -106,7 +107,7 @@ Return the JSON object now.`;
     const message = await anthropic.messages.create({
       model: MODELS.extract,
       max_tokens: 4000,
-      system: SYSTEM,
+      system: `${companyKnowledge()}\n\n${SYSTEM}`,
       messages: [{ role: "user", content: context }],
     });
     raw = responseText(message);

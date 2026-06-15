@@ -4,6 +4,7 @@ import { Card } from "@/components/Card";
 import { SubmitButton } from "@/components/SubmitButton";
 import { saveSettings, generateWidgetToken } from "./actions";
 import { googleConfigured } from "@/lib/google/oauth";
+import { COMPANY, CATALOG } from "@/lib/knowledge/company";
 
 export const dynamic = "force-dynamic";
 
@@ -72,6 +73,30 @@ export default async function Settings({
         </Card>
       </section>
 
+      {/* Catalogue the AI is grounded in */}
+      <section className="flex flex-col gap-2">
+        <h2 className="text-sm font-semibold text-muted">Catalogue (what the AI knows)</h2>
+        <Card>
+          <p className="text-sm font-medium">{COMPANY.name}</p>
+          <p className="mt-0.5 text-xs text-muted">{COMPANY.whatWeDo}</p>
+          <p className="mt-2 text-xs text-muted">
+            <span className="text-text">Service area:</span> {COMPANY.serviceArea.join(", ")}
+          </p>
+
+          <Kb label="Door types" items={CATALOG.doorTypes} />
+          <Kb label="Materials" items={CATALOG.materials} />
+          <Kb label="Glass" items={CATALOG.glass} />
+          <Kb label="Finishes" items={CATALOG.finishes} />
+          <Kb label="Hardware" items={CATALOG.hardware} />
+
+          <p className="mt-3 border-t border-hairline pt-2 text-[11px] text-muted">
+            The AI uses this to understand requests and write follow-ups. We build
+            custom, so it&apos;s a guide, not a limit. Edit it in
+            <code className="text-text"> lib/knowledge/company.ts</code>.
+          </p>
+        </Card>
+      </section>
+
       {/* Home-screen widget (Phase 5) */}
       <section className="flex flex-col gap-2">
         <h2 className="text-sm font-semibold text-muted">Home-screen widget</h2>
@@ -132,6 +157,19 @@ export default async function Settings({
         </form>
       </section>
     </main>
+  );
+}
+
+function Kb({ label, items }: { label: string; items: string[] }) {
+  return (
+    <div className="mt-3">
+      <p className="text-xs font-semibold text-accent">{label}</p>
+      <ul className="mt-1 flex flex-col gap-0.5">
+        {items.map((it) => (
+          <li key={it} className="text-xs text-muted">• {it}</li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
