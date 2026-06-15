@@ -8,6 +8,55 @@ coaching — with you approving anything that leaves the system.
 
 ---
 
+## Phase 3 ✅ — Gmail drafts + Calendar events
+
+Approving an email creates a real **Gmail draft** (never auto-sent); approving an
+event creates a real **Google Calendar event** with location + reminder.
+Re-running never duplicates (idempotency keys). Status shows **Synced / Failed**
+with a Retry button. SMS stays manual (Copy / Open in Messages).
+
+**This is optional to set up now — everything else works without it.** When you're
+ready, connect Google:
+
+1. **Run the new migration:** Supabase → SQL Editor → paste all of
+   `supabase/migrations/0002_google.sql` → Run.
+2. **Create a Google Cloud project:** https://console.cloud.google.com → top bar
+   project dropdown → **New Project** → name it `closer` → Create.
+3. **Enable the APIs:** left menu **APIs & Services → Library** → search and
+   **Enable** both **Gmail API** and **Google Calendar API**.
+4. **OAuth consent screen:** APIs & Services → **OAuth consent screen** →
+   **External** → fill app name + your email → **Save**. Keep it in **Testing**
+   mode and under **Test users** add your own Google email (so you don't need
+   Google to verify the app).
+5. **Create credentials:** APIs & Services → **Credentials → Create Credentials →
+   OAuth client ID → Web application**. Under **Authorized redirect URIs** add:
+   - `http://localhost:3000/api/google/callback` (local), and
+   - `https://YOUR-VERCEL-URL/api/google/callback` (production).
+   Create → copy the **Client ID** and **Client secret**.
+6. **Paste into `.env.local`** (and Vercel env vars):
+   ```
+   GOOGLE_CLIENT_ID=...
+   GOOGLE_CLIENT_SECRET=...
+   GOOGLE_REDIRECT_URI=http://localhost:3000/api/google/callback
+   APP_URL=http://localhost:3000
+   ```
+   (On Vercel use your real URL for the last two.)
+7. Restart the app → **Settings → Connect Google** → approve. Now approving an
+   email/event pushes it to Gmail/Calendar.
+
+> Scopes requested: Gmail **compose** (drafts only — it cannot send) and Calendar
+> **events**. Your tokens are stored only in your own Supabase, server-side.
+
+---
+
+## Phase 2 ✅ — Approval queue
+
+Every AI-proposed email / SMS / calendar event lands in the **To approve** screen.
+Tap one to open a popup, **edit** it, then **Approve** (or Save / Dismiss).
+Nothing leaves the system on its own. No setup needed — it uses the Phase 0 DB.
+
+---
+
 ## Where we are: Phase 1 ✅
 
 Paste a real call/meeting transcript and the app turns it into a deal, a useful

@@ -50,11 +50,16 @@ export default async function Dashboard() {
           <p className="text-sm text-muted">{greeting()}</p>
           <h1 className="text-2xl font-semibold">Today</h1>
         </div>
-        <form action="/auth/signout" method="post">
-          <button type="submit" className="text-sm text-muted">
-            Sign out
-          </button>
-        </form>
+        <div className="flex items-center gap-4">
+          <Link href="/settings" className="text-sm text-muted">
+            Settings
+          </Link>
+          <form action="/auth/signout" method="post">
+            <button type="submit" className="text-sm text-muted">
+              Sign out
+            </button>
+          </form>
+        </div>
       </header>
 
       {/* Commission / goal row */}
