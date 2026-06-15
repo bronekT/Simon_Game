@@ -11,8 +11,9 @@ export type ExtractResult =
   | { ok: true; data: Extraction }
   | { ok: false; raw: string; error: string };
 
-const SYSTEM = `You are the extraction engine for a field salesperson's AI Sales OS
-(roofing / doors / windows / siding / exterior, Ontario, Canada). You read ONE
+const SYSTEM = `You are the extraction engine for a DOOR specialist's AI Sales OS
+(Ontario, Canada). The business sells and installs doors — entry/front, patio,
+storm, French, sliding, garage, interior, bifold, and screen doors. You read ONE
 call or meeting transcript and return a single structured JSON object.
 
 Return ONLY the JSON object — no prose, no markdown, no code fences.
@@ -53,7 +54,16 @@ Where the meeting happens (for booking_call: where the FUTURE visit will be):
 - "virtual" → a video/online meeting (Zoom, FaceTime, Google Meet).
 Use null only if truly indeterminable.
 
-==================== STEP 3: FILL THE REST ====================
+==================== STEP 3: WHAT DOORS ====================
+- door_type = the MAIN door type the client is after, one of: entry, patio,
+  storm, french, sliding, garage, interior, bifold, screen, other. null if unclear.
+- door_count = how many doors they want (integer), or null if not stated.
+- service_type = "doors" (this business only does doors) unless clearly otherwise.
+- In "summary", lead with what they want in plain words — door type(s), how many,
+  material/colour/style if mentioned, and the reason (e.g. "drafty old front
+  door", "new patio build") — then their pain and urgency.
+
+==================== STEP 4: FILL THE REST ====================
 - scores.* = integers 0–10 rating the salesperson on each skill (rapport,
   discovery, pain, product, objection-handling, closing, follow-up). Only
   meaningful for "appointment"/"followup_call"; use 0 for "note".

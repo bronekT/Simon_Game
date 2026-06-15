@@ -6,9 +6,10 @@ import type { SettingsContext } from "./extract";
 // and coaching from the summary + hooks (NOT the full transcript again — cost
 // control). Personal hooks are injected so follow-ups feel personal.
 
-const SYSTEM = `You write follow-ups and quick coaching for a field salesperson
-(roofing / doors / exterior, Ontario, Canada). Work ONLY from the structured
-summary you are given — do not ask for the transcript.
+const SYSTEM = `You write follow-ups and quick coaching for a DOOR specialist's
+salesperson (entry, patio, storm, French, sliding, garage, interior doors;
+Ontario, Canada). Work ONLY from the structured summary you are given — do not
+ask for the transcript. Reference the specific door type(s) and quantity.
 
 Return ONLY a JSON object (no prose, no code fences):
 {
@@ -34,14 +35,15 @@ Guidance:
 // Reactivation draft for a dead lead (SPEC.md Phase 5). AI-written when a key is
 // present, otherwise a sensible template so automations work without AI.
 export async function writeReactivation(
-  deal: { client_name: string | null; service_type: string | null; main_objection: string | null },
+  deal: { client_name: string | null; door_type: string | null; main_objection: string | null },
   settings: SettingsContext,
 ): Promise<{ subject: string; body: string }> {
   const name = deal.client_name ?? "there";
   const sig = settings.email_signature ?? settings.company_name ?? "";
+  const what = deal.door_type ? `${deal.door_type} doors` : "new doors";
   const fallback = {
-    subject: `Still thinking about your ${deal.service_type ?? "project"}?`,
-    body: `Hi ${name},\n\nIt's been a while since we last spoke about your ${deal.service_type ?? "project"}. A lot can change with pricing and timing — I'd be happy to take a fresh look whenever you're ready, no pressure.\n\nWould a quick call this week work?\n\n${sig}`,
+    subject: `Still thinking about your ${what}?`,
+    body: `Hi ${name},\n\nIt's been a while since we last spoke about your ${what}. Pricing and lead times have changed, so I'd be happy to take a fresh look and re-quote whenever you're ready — no pressure.\n\nWould a quick call this week work?\n\n${sig}`,
   };
 
   if (!process.env.ANTHROPIC_API_KEY) return fallback;
@@ -52,13 +54,13 @@ export async function writeReactivation(
       model: MODELS.write,
       max_tokens: 800,
       system:
-        "You write a single short, warm reactivation email to a lapsed sales lead (roofing/doors/exterior). Return ONLY JSON: {\"subject\":\"\",\"body\":\"\"}. No pressure, offer a fresh look, end with a soft question. Sign with the signature if provided.",
+        "You write a single short, warm reactivation email to a lapsed door-sales lead (entry/patio/storm/French/sliding/garage/interior doors). Return ONLY JSON: {\"subject\":\"\",\"body\":\"\"}. No pressure, reference the door type if known, offer a fresh look/quote, end with a soft question. Sign with the signature if provided.",
       messages: [
         {
           role: "user",
           content: JSON.stringify({
             client_name: deal.client_name,
-            service_type: deal.service_type,
+            door_type: deal.door_type,
             past_objection: deal.main_objection,
             email_signature: settings.email_signature,
             company_name: settings.company_name,

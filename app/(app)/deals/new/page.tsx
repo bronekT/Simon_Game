@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { createDeal } from "./actions";
 import {
-  SERVICE_TYPES,
+  DOOR_TYPES,
+  DOOR_LABELS,
   LEAD_SOURCES,
   DEAL_STATUSES,
   LOCATION_TYPES,
@@ -29,22 +30,39 @@ export default function NewDeal() {
         </Field>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Status">
-            <Select name="status" options={DEAL_STATUSES} defaultValue="new" />
+          <Field label="Door type">
+            <select name="door_type" defaultValue="" className="w-full px-3 py-2.5">
+              <option value="">—</option>
+              {DOOR_TYPES.map((d) => (
+                <option key={d} value={d}>{DOOR_LABELS[d]}</option>
+              ))}
+            </select>
           </Field>
-          <Field label="Service">
-            <Select name="service_type" options={SERVICE_TYPES} placeholder="—" />
+          <Field label="How many doors">
+            <input
+              name="door_count"
+              type="number"
+              inputMode="numeric"
+              min="1"
+              step="1"
+              placeholder="e.g. 2"
+              className="w-full px-3 py-2.5"
+            />
           </Field>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Lead source">
-            <Select name="lead_source" options={LEAD_SOURCES} placeholder="—" />
+          <Field label="Status">
+            <Select name="status" options={DEAL_STATUSES} defaultValue="new" />
           </Field>
           <Field label="Location">
             <Select name="location_type" options={LOCATION_TYPES} placeholder="—" />
           </Field>
         </div>
+
+        <Field label="Lead source">
+          <Select name="lead_source" options={LEAD_SOURCES} placeholder="—" />
+        </Field>
 
         <div className="grid grid-cols-2 gap-3">
           <Field label="Quote price (CAD)">

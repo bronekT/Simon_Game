@@ -46,7 +46,7 @@ async function handle(request: Request): Promise<Response> {
 
   const { data: dead } = await admin
     .from("deals")
-    .select("id, user_id, client_name, service_type, main_objection, email")
+    .select("id, user_id, client_name, door_type, main_objection, email")
     .eq("status", "dead")
     .lt("updated_at", thirtyDaysAgo)
     .limit(20);
@@ -70,7 +70,7 @@ async function handle(request: Request): Promise<Response> {
     const draft = await writeReactivation(
       {
         client_name: deal.client_name as string | null,
-        service_type: deal.service_type as string | null,
+        door_type: deal.door_type as string | null,
         main_objection: deal.main_objection as string | null,
       },
       {

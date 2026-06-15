@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "CLOSER",
-  description: "Your personal AI Sales OS.",
+  description: "AI sales assistant for a door specialist.",
   manifest: "/manifest.webmanifest",
   icons: {
     icon: "/icons/icon.svg",

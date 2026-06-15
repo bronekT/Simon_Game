@@ -4,8 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/Card";
 import { StatusBadge } from "@/components/StatusBadge";
 import { DraftCard } from "@/components/DraftCard";
+import { DoorWantLine, EngagementChips } from "@/components/DealMeta";
 import { money, titleCase, dateTime, shortDate } from "@/lib/format";
-import type { Deal } from "@/lib/types";
+import { DOOR_LABELS, type Deal } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -102,9 +103,15 @@ export default async function DealDetail({
           <h1 className="text-2xl font-semibold">{deal.client_name}</h1>
           <StatusBadge status={deal.status} />
         </div>
+        {(deal.door_type || deal.door_count) && (
+          <p className="mt-1.5 text-sm">
+            <DoorWantLine type={deal.door_type} count={deal.door_count} />
+          </p>
+        )}
         {deal.next_action && (
           <p className="mt-1 text-sm text-muted">{deal.next_action}</p>
         )}
+        <EngagementChips deal={deal} className="mt-3" />
       </header>
 
       {analyzed && (
@@ -256,7 +263,8 @@ export default async function DealDetail({
       <Card>
         <h2 className="mb-3 text-sm font-semibold text-muted">Details</h2>
         <dl className="flex flex-col divide-y divide-hairline">
-          <Row label="Service" value={titleCase(deal.service_type)} />
+          <Row label="Door type" value={deal.door_type ? DOOR_LABELS[deal.door_type] : "—"} />
+          <Row label="Quantity" value={deal.door_count != null ? `${deal.door_count}` : "—"} />
           <Row label="Lead source" value={titleCase(deal.lead_source)} />
           <Row label="Location" value={titleCase(deal.location_type)} />
           <Row label="Phone" value={deal.phone ?? "—"} />

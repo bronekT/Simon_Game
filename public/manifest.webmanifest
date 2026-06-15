@@ -1,7 +1,7 @@
 {
-  "name": "CLOSER — AI Sales OS",
+  "name": "CLOSER — Door Sales OS",
   "short_name": "CLOSER",
-  "description": "Your personal AI Sales Operating System.",
+  "description": "AI sales assistant for a door specialist.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

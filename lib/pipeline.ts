@@ -250,7 +250,9 @@ async function resolveDeal(
       phone: data.client.phone,
       email: data.client.email,
       address: data.client.address,
-      service_type: data.service_type,
+      service_type: data.service_type ?? "doors",
+      door_type: data.door_type,
+      door_count: data.door_count != null ? Math.round(data.door_count) : null,
       status: "new",
     })
     .select("id")
@@ -266,7 +268,7 @@ async function applyDealUpdate(
 ) {
   const { data: current } = await supabase
     .from("deals")
-    .select("status, service_type")
+    .select("status, service_type, door_type, door_count")
     .eq("id", dealId)
     .single();
 
@@ -281,6 +283,11 @@ async function applyDealUpdate(
   };
   if (!current?.service_type && data.service_type) {
     update.service_type = data.service_type;
+  }
+  // Fill door details from the analysis when we don't already have them.
+  if (!current?.door_type && data.door_type) update.door_type = data.door_type;
+  if (current?.door_count == null && data.door_count != null) {
+    update.door_count = Math.round(data.door_count);
   }
 
   await supabase.from("deals").update(update).eq("id", dealId);

@@ -2,7 +2,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/Card";
 import { StatusBadge } from "@/components/StatusBadge";
-import { money, titleCase } from "@/lib/format";
+import { DoorWantLine, EngagementChips } from "@/components/DealMeta";
+import { money } from "@/lib/format";
 import type { Deal } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -43,10 +44,11 @@ export default async function DealsList() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="truncate font-medium">{d.client_name}</p>
-                    <p className="mt-0.5 truncate text-sm text-muted">
-                      {[titleCase(d.service_type), d.address]
-                        .filter((x) => x && x !== "—")
-                        .join(" · ") || "No details yet"}
+                    <p className="mt-0.5 truncate text-sm">
+                      <DoorWantLine type={d.door_type} count={d.door_count} />
+                      {!d.door_type && !d.door_count && (
+                        <span className="text-muted">{d.address ?? "No details yet"}</span>
+                      )}
                     </p>
                   </div>
                   <div className="shrink-0 text-right">
@@ -56,6 +58,7 @@ export default async function DealsList() {
                     </p>
                   </div>
                 </div>
+                <EngagementChips deal={d} className="mt-3" />
               </Card>
             </Link>
           ))}

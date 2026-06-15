@@ -13,6 +13,11 @@ export type DealStatus =
 
 export type LocationType = "home" | "showroom" | "phone" | "virtual";
 
+// The business sells doors — these are the door types it quotes.
+export type DoorType =
+  | "entry" | "patio" | "storm" | "french" | "sliding"
+  | "garage" | "interior" | "bifold" | "screen" | "other";
+
 export interface Deal {
   id: string;
   user_id: string;
@@ -23,6 +28,8 @@ export interface Deal {
   phone: string | null;
   email: string | null;
   service_type: ServiceType | null;
+  door_type: DoorType | null;
+  door_count: number | null;
   lead_source: LeadSource | null;
   status: DealStatus;
   location_type: LocationType | null;
@@ -37,13 +44,14 @@ export interface Deal {
   main_objection: string | null;
   next_action: string | null;
   followup_at: string | null;
+  followup_sent_at: string | null;
 }
 
-// Fields the user can set when creating/editing a deal by hand (Phase 0).
+// Fields the user can set when creating/editing a deal by hand.
 export type DealInput = Pick<
   Deal,
   | "client_name" | "address" | "phone" | "email"
-  | "service_type" | "lead_source" | "status" | "location_type"
+  | "door_type" | "door_count" | "lead_source" | "status" | "location_type"
   | "quote_price" | "probability" | "next_action" | "followup_at"
 >;
 
@@ -60,7 +68,56 @@ export const LOCATION_TYPES: LocationType[] = [
   "home", "showroom", "phone", "virtual",
 ];
 
+export const DOOR_TYPES: DoorType[] = [
+  "entry", "patio", "storm", "french", "sliding",
+  "garage", "interior", "bifold", "screen", "other",
+];
+
+export const DOOR_LABELS: Record<DoorType, string> = {
+  entry: "Entry / front",
+  patio: "Patio",
+  storm: "Storm",
+  french: "French",
+  sliding: "Sliding",
+  garage: "Garage",
+  interior: "Interior",
+  bifold: "Bifold",
+  screen: "Screen",
+  other: "Other",
+};
+
 // Statuses considered "open pipeline" (not yet closed/dead).
 export const OPEN_STATUSES: DealStatus[] = [
   "new", "booked", "met", "quoted", "negotiation",
 ];
+
+// What the client is after, in one line: "3× Patio doors".
+export function doorWant(
+  type: DoorType | null,
+  count: number | null,
+): string | null {
+  if (!type && !count) return null;
+  const noun = type ? `${DOOR_LABELS[type]} doors` : "doors";
+  return count ? `${count}× ${noun}` : noun;
+}
+
+// Per-client engagement signals derived from the deal record.
+export interface Engagement {
+  booked: boolean;
+  met: boolean;
+  quoted: boolean;
+  followupSent: boolean;
+}
+export function engagement(d: {
+  status: DealStatus;
+  quote_price: number | null;
+  followup_sent_at: string | null;
+}): Engagement {
+  const met = ["met", "quoted", "negotiation", "won", "lost"].includes(d.status);
+  return {
+    booked: d.status === "booked",
+    met,
+    quoted: d.quote_price != null || ["quoted", "negotiation", "won"].includes(d.status),
+    followupSent: Boolean(d.followup_sent_at),
+  };
+}

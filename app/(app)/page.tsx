@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/Card";
 import { StatusBadge } from "@/components/StatusBadge";
+import { DoorWantLine, EngagementChips } from "@/components/DealMeta";
 import { money, shortDate } from "@/lib/format";
 import { OPEN_STATUSES, type Deal } from "@/lib/types";
 
@@ -160,6 +161,11 @@ export default async function Dashboard() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="truncate font-medium">{d.client_name}</p>
+                    {(d.door_type || d.door_count) && (
+                      <p className="mt-0.5 truncate text-sm">
+                        <DoorWantLine type={d.door_type} count={d.door_count} />
+                      </p>
+                    )}
                     <p className="mt-0.5 truncate text-sm text-muted">
                       {d.next_action ?? "No next action set"}
                     </p>
@@ -171,6 +177,7 @@ export default async function Dashboard() {
                     </p>
                   </div>
                 </div>
+                <EngagementChips deal={d} className="mt-3" />
                 {d.followup_at && (
                   <p className="mt-2 text-xs text-followup">
                     Follow up {shortDate(d.followup_at)}

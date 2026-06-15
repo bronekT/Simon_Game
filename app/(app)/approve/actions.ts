@@ -35,15 +35,27 @@ export async function approveAction(form: FormData) {
   if (!id) return;
 
   const supabase = await createClient();
-  await supabase
+  const { data: row } = await supabase
     .from("actions_queue")
     .update({ payload: buildPayload(form, kind), status: "approved" })
-    .eq("id", id);
+    .eq("id", id)
+    .select("deal_id")
+    .maybeSingle();
+
+  // Mark the deal as "follow-up sent" once an email is approved (the human's
+  // act of preparing/sending it) — drives the engagement badge on the client.
+  if (kind === "email" && row?.deal_id) {
+    await supabase
+      .from("deals")
+      .update({ followup_sent_at: new Date().toISOString() })
+      .eq("id", row.deal_id);
+  }
 
   if (kind === "email" || kind === "calendar_event") {
     await doPush(id);
   }
   revalidatePath("/approve");
+  revalidatePath("/deals");
 }
 
 // Save edits without approving.

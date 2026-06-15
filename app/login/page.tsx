@@ -14,7 +14,7 @@ export default async function Login({
           C
         </div>
         <h1 className="text-2xl font-semibold">CLOSER</h1>
-        <p className="mt-1 text-sm text-muted">Your personal AI Sales OS</p>
+        <p className="mt-1 text-sm text-muted">AI sales assistant for door pros</p>
       </div>
 
       <form action={signIn} className="flex flex-col gap-3">

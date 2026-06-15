@@ -21,6 +21,13 @@ const SERVICE = z
   .enum(["roofing", "doors", "windows", "siding", "insulation", "other"])
   .nullable();
 
+const DOOR = z
+  .enum([
+    "entry", "patio", "storm", "french", "sliding",
+    "garage", "interior", "bifold", "screen", "other",
+  ])
+  .nullable();
+
 export const DraftSchema = z.object({
   // Kept as a loose string here; sanitized to the DB enum on persist.
   type: z.string(),
@@ -39,6 +46,8 @@ export const ExtractionSchema = z.object({
     address: nullableStr,
   }),
   service_type: SERVICE,
+  door_type: DOOR, // the main door type the client wants
+  door_count: z.number().nullable(), // how many doors
   match_hints: z.array(z.string()).default([]),
   summary: z.string(),
   objections: z.array(z.string()).default([]),
