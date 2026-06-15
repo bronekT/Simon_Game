@@ -56,6 +56,7 @@ export async function middleware(request: NextRequest) {
 export const config = {
   // Run on everything except static assets and the PWA files.
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|icons/).*)",
+    // Exclude API routes (they do their own auth / secret checks) and static/PWA files.
+    "/((?!api|_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|icons/).*)",
   ],
 };

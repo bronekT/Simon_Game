@@ -17,7 +17,13 @@ export async function processTranscript(form: FormData) {
   }
 
   const supabase = await createClient();
-  const result = await runPipeline(supabase, transcript, attachDealId);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/login");
+  }
+  const result = await runPipeline(supabase, transcript, attachDealId, user.id);
 
   if (!result.ok) {
     // Flagged needs_review — surface the reason, don't proceed (Section 3).

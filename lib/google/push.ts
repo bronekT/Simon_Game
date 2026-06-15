@@ -46,6 +46,26 @@ export async function pushAction(
   }
 }
 
+// Direct one-way push of a checklist item / agenda entry to Google Calendar
+// (SPEC.md Phase 4). Used by the Tasks screen.
+export async function pushCalendar(
+  supabase: SupabaseClient,
+  args: { title: string; start: string; location?: string; notes?: string; idempotencyKey: string },
+): Promise<PushResult> {
+  const auth = await authedClientForUser(supabase);
+  if (!auth) return { ok: false, error: "Google is not connected. Connect it in Settings." };
+  try {
+    const id = await insertCalendarEvent(
+      auth,
+      { title: args.title, start: args.start, location: args.location ?? "", notes: args.notes ?? "" },
+      args.idempotencyKey,
+    );
+    return { ok: true, externalId: id };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
 async function createGmailDraft(
   auth: OAuth2Client,
   payload: Record<string, unknown>,

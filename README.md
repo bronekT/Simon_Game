@@ -8,6 +8,30 @@ coaching — with you approving anything that leaves the system.
 
 ---
 
+## Phase 4 ✅ — Auto-ingestion + checklist/agenda
+
+- **Auto-ingestion:** a scheduled job reads new transcript emails from a Gmail
+  label (where your Plaud→Zapier flow drops them) and runs each through the
+  pipeline into the approval queue — no manual paste needed.
+- **Plan screen** (bottom nav): a checklist with checkboxes + an agenda of
+  upcoming follow-ups. Tasks push one-way to Google Calendar.
+
+**Optional setup (only when you want auto-ingestion):**
+1. Pick a long random `CRON_SECRET` and add it to `.env.local` + Vercel env.
+2. Make a Gmail label (default name `CLOSER`) and have Zapier/Plaud file
+   transcript emails under it (or set `CLOSER_GMAIL_LABEL` to your label name).
+3. Schedule it:
+   - **Vercel:** already configured in `vercel.json` (every 15 min). Set
+     `CRON_SECRET` in Vercel and it just works.
+   - **Supabase:** `supabase functions deploy ingest`, set its secrets
+     (`APP_URL`, `CRON_SECRET`), and add a schedule (e.g. `*/15 * * * *`).
+4. Test manually anytime: `POST /api/cron/ingest` with header
+   `Authorization: Bearer <CRON_SECRET>`.
+
+The checklist works with no extra setup (calendar push needs Phase 3's Google).
+
+---
+
 ## Phase 3 ✅ — Gmail drafts + Calendar events
 
 Approving an email creates a real **Gmail draft** (never auto-sent); approving an

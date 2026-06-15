@@ -8,6 +8,7 @@ const ITEMS = [
   { href: "/deals", label: "Deals", icon: DealsIcon },
   { href: "/capture", label: "Capture", icon: CaptureIcon },
   { href: "/approve", label: "Approve", icon: ApproveIcon },
+  { href: "/tasks", label: "Plan", icon: TasksIcon },
 ];
 
 export function BottomNav() {
@@ -45,6 +46,15 @@ function isActive(pathname: string, href: string): boolean {
       : false;
   }
   return pathname.startsWith(href);
+}
+
+function TasksIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 6h11M9 12h11M9 18h11" />
+      <path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2" />
+    </svg>
+  );
 }
 
 function ApproveIcon() {

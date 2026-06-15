@@ -16,11 +16,13 @@ export async function runPipeline(
   supabase: SupabaseClient,
   transcript: string,
   attachDealId: string | null,
+  userId: string,
+  source: "manual" | "plaud" = "manual",
 ): Promise<PipelineResult> {
   // 1. Ingest — store the raw transcript on an appointments row first.
   const { data: appt, error: apptErr } = await supabase
     .from("appointments")
-    .insert({ transcript, source: "manual", deal_id: attachDealId })
+    .insert({ user_id: userId, transcript, source, deal_id: attachDealId })
     .select("id")
     .single();
   if (apptErr || !appt) {
@@ -32,6 +34,7 @@ export async function runPipeline(
   const { data: settingsRow } = await supabase
     .from("settings")
     .select("company_name, showroom_address, email_signature")
+    .eq("user_id", userId)
     .maybeSingle();
   const settings: SettingsContext = {
     company_name: settingsRow?.company_name ?? null,
@@ -55,6 +58,7 @@ export async function runPipeline(
     supabase,
     data,
     attachDealId,
+    userId,
   );
 
   // 4 (branch). Polished drafts + coaching for appointments (Sonnet).
@@ -103,6 +107,7 @@ export async function runPipeline(
   if (drafts.length > 0) {
     await supabase.from("drafts").insert(
       drafts.map((d) => ({
+        user_id: userId,
         deal_id: dealId,
         type: safeDraftType(d.type),
         channel: d.channel,
@@ -118,6 +123,7 @@ export async function runPipeline(
   // Google push is Phase 3). Idempotency keys are deterministic so a retry
   // never duplicates.
   await enqueueActions(supabase, {
+    userId,
     dealId,
     appointmentId,
     drafts,
@@ -130,13 +136,14 @@ export async function runPipeline(
 async function enqueueActions(
   supabase: SupabaseClient,
   args: {
+    userId: string;
     dealId: string;
     appointmentId: string;
     drafts: Draft[];
     proposedEvent: Extraction["proposed_event"];
   },
 ) {
-  const { dealId, appointmentId, drafts, proposedEvent } = args;
+  const { userId, dealId, appointmentId, drafts, proposedEvent } = args;
 
   const { data: contact } = await supabase
     .from("deals")
@@ -145,6 +152,7 @@ async function enqueueActions(
     .single();
 
   const rows: {
+    user_id: string;
     deal_id: string;
     kind: "email" | "sms" | "calendar_event";
     payload: Record<string, unknown>;
@@ -159,6 +167,7 @@ async function enqueueActions(
         ? { subject: d.subject ?? "", body: d.body, to: contact?.email ?? null, draft_type: d.type }
         : { body: d.body, to: contact?.phone ?? null, draft_type: d.type };
     rows.push({
+      user_id: userId,
       deal_id: dealId,
       kind,
       payload,
@@ -169,6 +178,7 @@ async function enqueueActions(
 
   if (proposedEvent) {
     rows.push({
+      user_id: userId,
       deal_id: dealId,
       kind: "calendar_event",
       payload: {
@@ -195,6 +205,7 @@ async function resolveDeal(
   supabase: SupabaseClient,
   data: Extraction,
   attachDealId: string | null,
+  userId: string,
 ): Promise<{ dealId: string; created: boolean; matchedBy: string }> {
   // Human-in-the-loop: an explicit choice always wins.
   if (attachDealId) {
@@ -203,7 +214,8 @@ async function resolveDeal(
 
   const { data: rows } = await supabase
     .from("deals")
-    .select("id, client_name, phone, status, updated_at");
+    .select("id, client_name, phone, status, updated_at")
+    .eq("user_id", userId);
   const candidates = (rows ?? []) as DealCandidate[];
 
   const match = chooseMatch(candidates, {
@@ -218,6 +230,7 @@ async function resolveDeal(
   const { data: created } = await supabase
     .from("deals")
     .insert({
+      user_id: userId,
       client_name: data.client.name ?? "New lead",
       phone: data.client.phone,
       email: data.client.email,
