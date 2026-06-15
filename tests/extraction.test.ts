@@ -36,16 +36,32 @@ test("valid extraction parses", () => {
   assert.equal(r.success, true);
 });
 
-test("invalid extraction (missing summary) is rejected", () => {
+test("missing fields are coerced, not rejected (robust to model variance)", () => {
   const bad: Record<string, unknown> = { ...valid };
   delete bad.summary;
+  delete bad.scores;
   const r = ExtractionSchema.safeParse(bad);
-  assert.equal(r.success, false);
+  assert.equal(r.success, true);
+  if (r.success) {
+    assert.equal(r.data.summary, "");
+    assert.equal(r.data.scores.objection, 0);
+  }
 });
 
-test("wrong record_type enum is rejected", () => {
+test("odd field shapes coerce (competitor as object, score as string)", () => {
+  const odd = { ...valid, competitor: { name: "ABC Doors" }, scores: { ...valid.scores, objection: "5" } };
+  const r = ExtractionSchema.safeParse(odd);
+  assert.equal(r.success, true);
+  if (r.success) {
+    assert.equal(r.data.competitor, "ABC Doors");
+    assert.equal(r.data.scores.objection, 5);
+  }
+});
+
+test("unknown record_type coerces to note", () => {
   const r = ExtractionSchema.safeParse({ ...valid, record_type: "chitchat" });
-  assert.equal(r.success, false);
+  assert.equal(r.success, true);
+  if (r.success) assert.equal(r.data.record_type, "note");
 });
 
 test("extractJson pulls JSON out of prose and code fences", () => {
