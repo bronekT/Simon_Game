@@ -1,25 +1,32 @@
 "use server";
 
-import { after } from "next/server";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { ingestTranscript, analyzeAppointment } from "@/lib/pipeline";
+import { runPipeline, type PipelineResult } from "@/lib/pipeline";
 import { imageToTranscript, isSupportedImage } from "@/lib/ai/vision";
 
-interface FilePayload {
-  isImage: boolean;
-  base64: string;
-  mediaType: string;
-  text: string;
+// Read the text to analyze from the textarea or an uploaded file (a .txt
+// transcript, or a screenshot we read with vision).
+async function resolveTranscript(form: FormData): Promise<string> {
+  const typed = String(form.get("transcript") ?? "").trim();
+  const file = form.get("file");
+  if (file && file instanceof File && file.size > 0) {
+    const mediaType = file.type || "application/octet-stream";
+    if (isSupportedImage(mediaType)) {
+      const base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
+      const fromImage = await imageToTranscript(base64, mediaType);
+      return typed ? `${typed}\n\n${fromImage}` : fromImage;
+    }
+    const text = (await file.text()).trim();
+    if (text) return typed ? `${typed}\n\n${text}` : text;
+  }
+  return typed;
 }
 
-// Capture runs in the BACKGROUND: we save the transcript instantly, send the
-// user straight back, and do the slow AI work after the response. Results show
-// up in Deals / To-approve a few seconds later.
+// Synchronous so the flow is obvious: the button shows "Analyzing…", then you
+// land on the deal. Used by Capture and the per-deal "update from file".
 export async function processTranscript(form: FormData) {
-  const typed = String(form.get("transcript") ?? "").trim();
   const attachRaw = String(form.get("deal_id") ?? "").trim();
   const attachDealId = attachRaw === "" ? null : attachRaw;
   const backTo = String(form.get("back_to") ?? "/capture");
@@ -29,57 +36,29 @@ export async function processTranscript(form: FormData) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
-  const userId = user.id;
 
-  // Read any uploaded file's bytes now (the request stream is gone after we return).
-  let filePayload: FilePayload | null = null;
-  const file = form.get("file");
-  if (file && file instanceof File && file.size > 0) {
-    const mediaType = file.type || "application/octet-stream";
-    if (isSupportedImage(mediaType)) {
-      filePayload = {
-        isImage: true,
-        base64: Buffer.from(await file.arrayBuffer()).toString("base64"),
-        mediaType,
-        text: "",
-      };
+  let result: PipelineResult | null = null;
+  let errorMsg = "";
+  try {
+    const transcript = await resolveTranscript(form);
+    if (transcript.length < 20) {
+      errorMsg = "Add a transcript, paste text, or attach a screenshot/file.";
     } else {
-      filePayload = { isImage: false, base64: "", mediaType, text: (await file.text()).trim() };
+      result = await runPipeline(supabase, transcript, attachDealId, user.id);
     }
+  } catch (e) {
+    errorMsg = e instanceof Error ? e.message : "Something went wrong reading the file.";
   }
 
-  if (typed.length < 20 && !filePayload) {
-    redirect(`${backTo}?error=${encodeURIComponent("Add a transcript, paste text, or attach a screenshot/file.")}`);
-  }
-
-  // Save immediately (placeholder text if it's an attachment we still need to read).
-  const placeholder = typed || "(reading attachment…)";
-  const appointmentId = await ingestTranscript(supabase, userId, placeholder, attachDealId, "manual");
-  if (!appointmentId) {
-    redirect(`${backTo}?error=${encodeURIComponent("Could not save — please try again.")}`);
-  }
-
-  // Heavy work runs after the response is sent.
-  after(async () => {
-    const admin = createAdminClient();
-    try {
-      let transcript = typed;
-      if (filePayload) {
-        if (filePayload.isImage) {
-          transcript = await imageToTranscript(filePayload.base64, filePayload.mediaType);
-        } else {
-          transcript = typed ? `${typed}\n\n${filePayload.text}` : filePayload.text;
-        }
-        await admin.from("appointments").update({ transcript }).eq("id", appointmentId);
-      }
-      await analyzeAppointment(admin, userId, appointmentId!);
-    } catch {
-      await admin.from("appointments").update({ needs_review: true }).eq("id", appointmentId!);
-    }
-  });
+  if (errorMsg) redirect(`${backTo}?error=${encodeURIComponent(errorMsg)}`);
+  if (!result!.ok) redirect(`${backTo}?error=${encodeURIComponent(result!.error)}`);
 
   revalidatePath("/");
   revalidatePath("/deals");
   revalidatePath("/approve");
-  redirect(`${backTo}?processing=1`);
+
+  if (!result!.dealId) redirect(`/capture?logged=note`);
+
+  revalidatePath(`/deals/${result!.dealId}`);
+  redirect(`/deals/${result!.dealId}?analyzed=1`);
 }

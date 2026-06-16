@@ -11,8 +11,8 @@ const config: Config = {
       colors: {
         bg: "#0A0A0C",
         text: "#F5F5F7",
-        muted: "#8A8A90",
-        hairline: "rgba(255,255,255,.09)",
+        muted: "#9B9BA4",
+        hairline: "rgba(255,255,255,.14)",
         accent: "#E9A23B",
         // Status colors
         won: "#3FD089",
@@ -21,7 +21,7 @@ const config: Config = {
         task: "#5B8DEF",
       },
       borderColor: {
-        DEFAULT: "rgba(255,255,255,.09)",
+        DEFAULT: "rgba(255,255,255,.14)",
       },
       borderRadius: {
         card: "1rem",

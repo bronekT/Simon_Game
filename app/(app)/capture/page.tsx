@@ -18,6 +18,7 @@ export default async function Capture({
   const { data } = await supabase
     .from("deals")
     .select("id, client_name, status")
+    .not("status", "in", "(won,lost,dead)")
     .order("updated_at", { ascending: false });
   const deals = (data ?? []) as Pick<Deal, "id" | "client_name" | "status">[];
 

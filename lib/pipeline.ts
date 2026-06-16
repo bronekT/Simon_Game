@@ -185,9 +185,10 @@ async function enqueueActions(
 
   const { data: contact } = await supabase
     .from("deals")
-    .select("email, phone")
+    .select("email, phone, client_name")
     .eq("id", dealId)
     .single();
+  const clientName = (contact?.client_name as string) || "Client";
 
   const rows: {
     user_id: string;
@@ -220,7 +221,10 @@ async function enqueueActions(
       deal_id: dealId,
       kind: "calendar_event",
       payload: {
-        title: proposedEvent.title,
+        // Always lead the event title with the client's name.
+        title: proposedEvent.title?.toLowerCase().includes(clientName.toLowerCase())
+          ? proposedEvent.title
+          : `${clientName} — ${proposedEvent.title || "Doors visit"}`,
         start: proposedEvent.start,
         location: proposedEvent.location ?? "",
         notes: proposedEvent.notes ?? "",
@@ -301,15 +305,23 @@ async function applyDealUpdate(
     .eq("id", dealId)
     .single();
 
-  const update: Record<string, unknown> = {
-    next_action: data.next_action || null,
-    followup_at: data.followup_at,
-    competitor: data.competitor,
-    decision_maker: data.decision_maker,
-    main_objection: data.objections[0] ?? null,
-    probability: clamp(Math.round(data.close_probability), 0, 100),
-    status: nextStatus(data.record_type, current?.status as DealStatus),
-  };
+  // NON-DESTRUCTIVE: only write a field when the new analysis actually has a
+  // value for it. A short note ("sold", "left a vm") must never blank out good
+  // data that's already on the deal.
+  const update: Record<string, unknown> = {};
+  if (data.next_action) update.next_action = data.next_action;
+  if (data.followup_at) update.followup_at = data.followup_at;
+  if (data.competitor) update.competitor = data.competitor;
+  if (data.decision_maker) update.decision_maker = data.decision_maker;
+  if (data.objections[0]) update.main_objection = data.objections[0];
+  // Only move probability when the model is confident (a real number > 0).
+  if (data.close_probability && data.close_probability > 0) {
+    update.probability = clamp(Math.round(data.close_probability), 0, 100);
+  }
+  // Status only ADVANCES, never resets.
+  const ns = nextStatus(data.record_type, current?.status as DealStatus);
+  if (ns !== current?.status) update.status = ns;
+
   if (!current?.service_type && data.service_type) {
     update.service_type = data.service_type;
   }

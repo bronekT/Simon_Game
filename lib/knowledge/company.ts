@@ -12,6 +12,8 @@
 
 export const COMPANY = {
   name: "Elegant Entry Doors",
+  rep: "Tony Bronishevskyi",
+  phone: "+1 647-203-3978",
   whatWeDo:
     "Custom entry & exterior door systems — manufactured, finished, and installed in-house.",
   experienceYears: 15,
@@ -73,6 +75,7 @@ export const CATALOG = {
 export function companyKnowledge(): string {
   return [
     `COMPANY: ${COMPANY.name} — ${COMPANY.whatWeDo}`,
+    `SALESPERSON (you / "me" in transcripts): ${COMPANY.rep}, ${COMPANY.name}, ${COMPANY.phone}. Sign emails with this name + company + phone.`,
     `EXPERIENCE: ${COMPANY.experienceYears}+ years. ${COMPANY.manufacturing}`,
     `SERVICE AREA: ${COMPANY.serviceArea.join(", ")}.`,
     ``,

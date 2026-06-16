@@ -2,11 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/Card";
-import { StatusBadge } from "@/components/StatusBadge";
 import { DraftCard } from "@/components/DraftCard";
 import { DoorWantLine, EngagementChips } from "@/components/DealMeta";
+import { StatusSelect } from "@/components/StatusSelect";
 import { SubmitButton } from "@/components/SubmitButton";
 import { processTranscript } from "@/app/(app)/capture/actions";
+import { bumpFollowups, deleteDeal } from "./quick-actions";
 import { money, titleCase, dateTime, shortDate } from "@/lib/format";
 import { DOOR_LABELS, type Deal } from "@/lib/types";
 
@@ -113,7 +114,7 @@ export default async function DealDetail({
         </div>
         <div className="mt-2 flex items-start justify-between gap-3">
           <h1 className="text-2xl font-semibold">{deal.client_name}</h1>
-          <StatusBadge status={deal.status} />
+          <StatusSelect id={deal.id} status={deal.status} />
         </div>
         {(deal.door_type || deal.door_count) && (
           <p className="mt-1.5 text-sm">
@@ -124,6 +125,22 @@ export default async function DealDetail({
           <p className="mt-1 text-sm text-muted">{deal.next_action}</p>
         )}
         <EngagementChips deal={deal} className="mt-3" />
+
+        {/* Follow-up counter: how many of ~3 follow-ups you've done */}
+        <div className="mt-3 flex items-center gap-3">
+          <span className="text-xs text-muted">Follow-ups</span>
+          <form action={bumpFollowups}>
+            <input type="hidden" name="id" value={deal.id} />
+            <input type="hidden" name="delta" value="-1" />
+            <button className="flex h-7 w-7 items-center justify-center rounded-full border border-hairline text-muted active:scale-90">−</button>
+          </form>
+          <span className="text-sm font-semibold">{deal.followups_count ?? 0}<span className="text-muted">/3</span></span>
+          <form action={bumpFollowups}>
+            <input type="hidden" name="id" value={deal.id} />
+            <input type="hidden" name="delta" value="1" />
+            <button className="flex h-7 w-7 items-center justify-center rounded-full border border-hairline text-accent active:scale-90">+</button>
+          </form>
+        </div>
       </header>
 
       {processing && (
@@ -338,6 +355,19 @@ export default async function DealDetail({
           <SubmitButton pendingLabel="Updating…">Update from this</SubmitButton>
         </form>
       </Card>
+
+      {/* Delete */}
+      <details className="rounded-card border border-hairline bg-white/[0.02]">
+        <summary className="cursor-pointer list-none p-4 text-sm text-muted">
+          Delete this deal…
+        </summary>
+        <form action={deleteDeal} className="px-4 pb-4">
+          <input type="hidden" name="id" value={deal.id} />
+          <button className="w-full rounded-full bg-risk/15 py-2.5 text-sm font-medium text-risk active:scale-[0.99]">
+            Delete permanently
+          </button>
+        </form>
+      </details>
     </main>
   );
 }

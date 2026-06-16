@@ -45,6 +45,7 @@ export interface Deal {
   next_action: string | null;
   followup_at: string | null;
   followup_sent_at: string | null;
+  followups_count: number | null;
 }
 
 // Fields the user can set when creating/editing a deal by hand.

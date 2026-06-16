@@ -41,24 +41,36 @@ export function ApproveList({ actions }: { actions: QueueAction[] }) {
                 <span className="mt-1 inline-block text-[11px] text-accent">tap to edit</span>
               </button>
 
-              {/* Quick approve / dismiss without opening */}
+              {/* Quick actions */}
               <form className="flex shrink-0 flex-col gap-2">
                 <PayloadInputs action={a} />
+                {a.kind === "sms" ? (
+                  <a
+                    href={smsLink(a.payload.to, a.payload.body)}
+                    aria-label="Open Messages"
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-task/20 text-base text-task active:scale-90"
+                  >
+                    📱
+                  </a>
+                ) : (
+                  <button
+                    type="submit"
+                    formAction={approveAction}
+                    aria-label="Approve"
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-won/20 text-lg text-won active:scale-90"
+                  >
+                    ✓
+                  </button>
+                )}
                 <button
                   type="submit"
-                  formAction={approveAction}
-                  aria-label="Approve"
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-won/20 text-lg text-won active:scale-90"
+                  formAction={a.kind === "sms" ? approveAction : dismissAction}
+                  aria-label={a.kind === "sms" ? "Mark done" : "Dismiss"}
+                  className={`flex h-9 w-9 items-center justify-center rounded-full text-lg active:scale-90 ${
+                    a.kind === "sms" ? "bg-won/20 text-won" : "bg-risk/15 text-risk"
+                  }`}
                 >
-                  ✓
-                </button>
-                <button
-                  type="submit"
-                  formAction={dismissAction}
-                  aria-label="Dismiss"
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-risk/15 text-lg text-risk active:scale-90"
-                >
-                  ✕
+                  {a.kind === "sms" ? "✓" : "✕"}
                 </button>
               </form>
             </div>

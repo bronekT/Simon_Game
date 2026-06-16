@@ -326,3 +326,10 @@ alter default privileges in schema public grant all on sequences to anon, authen
 -- ============================================================================
 
 alter table settings add column if not exists inbound_token text unique;
+
+-- 0008_followups.sql
+-- ============================================================================
+-- CLOSER — follow-up counter on the deal (e.g. 1/3 follow-ups done)
+-- ============================================================================
+
+alter table deals add column if not exists followups_count int not null default 0;
