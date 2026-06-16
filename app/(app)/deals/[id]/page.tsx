@@ -2,12 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/Card";
-import { DraftCard } from "@/components/DraftCard";
 import { DoorWantLine, EngagementChips } from "@/components/DealMeta";
 import { StatusSelect } from "@/components/StatusSelect";
 import { SubmitButton } from "@/components/SubmitButton";
+import { ActionsInline, type QueueAction } from "@/components/ApproveList";
 import { processTranscript } from "@/app/(app)/capture/actions";
-import { bumpFollowups, deleteDeal } from "./quick-actions";
+import { bumpFollowups, deleteDeal, generateFollowups } from "./quick-actions";
 import { money, titleCase, dateTime, shortDate } from "@/lib/format";
 import { DOOR_LABELS, type Deal } from "@/lib/types";
 
@@ -55,14 +55,6 @@ const LOCATION_LABEL: Record<string, string> = {
   virtual: "Virtual",
 };
 
-interface DraftRow {
-  id: string;
-  type: string | null;
-  channel: string | null;
-  subject: string | null;
-  body: string;
-}
-
 export default async function DealDetail({
   params,
   searchParams,
@@ -82,21 +74,34 @@ export default async function DealDetail({
   if (!data) notFound();
   const deal = data as Deal;
 
-  const { data: apptRow } = await supabase
+  // All appointments for this deal, oldest → newest (the timeline / history).
+  const { data: apptRows } = await supabase
     .from("appointments")
     .select("*")
     .eq("deal_id", id)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const appt = apptRow as Appointment | null;
+    .order("created_at", { ascending: true });
+  const appts = (apptRows ?? []) as Appointment[];
+  // The meeting is the centerpiece: latest real appointment, else latest record.
+  const meeting =
+    [...appts].reverse().find((a) => a.record_type === "appointment") ??
+    (appts.length ? appts[appts.length - 1] : null);
+  const appt = meeting;
 
-  const { data: draftRows } = await supabase
-    .from("drafts")
-    .select("id, type, channel, subject, body")
+  // This deal's pending actions (approve / add to calendar right here).
+  const { data: actRows } = await supabase
+    .from("actions_queue")
+    .select("id, kind, payload, status, retries")
     .eq("deal_id", id)
-    .order("id", { ascending: true });
-  const drafts = (draftRows ?? []) as DraftRow[];
+    .eq("status", "proposed")
+    .order("created_at", { ascending: true });
+  const actions: QueueAction[] = (actRows ?? []).map((a) => ({
+    id: a.id as string,
+    kind: a.kind as QueueAction["kind"],
+    payload: (a.payload ?? {}) as Record<string, string | null>,
+    status: a.status as string,
+    retries: (a.retries as number) ?? 0,
+    client_name: deal.client_name,
+  }));
 
   return (
     <main className="flex flex-col gap-4">
@@ -303,18 +308,51 @@ export default async function DealDetail({
         </Card>
       )}
 
-      {/* Drafts */}
-      {drafts.length > 0 && (
-        <section className="flex flex-col gap-3">
-          <h2 className="text-lg font-semibold">Draft follow-ups</h2>
-          {drafts.map((d) => (
-            <DraftCard
-              key={d.id}
-              type={d.type}
-              channel={d.channel}
-              subject={d.subject}
-              body={d.body}
-            />
+      {/* Follow-ups & actions — approve / add to calendar right here */}
+      <section className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Follow-ups &amp; actions</h2>
+          <form action={generateFollowups}>
+            <input type="hidden" name="id" value={deal.id} />
+            <button className="rounded-full border border-accent/50 px-3 py-1 text-xs font-medium text-accent active:scale-95">
+              ✨ Generate
+            </button>
+          </form>
+        </div>
+        {actions.length > 0 ? (
+          <ActionsInline actions={actions} />
+        ) : (
+          <Card>
+            <p className="text-sm text-muted">
+              No pending email / SMS / calendar items. Tap <b className="text-accent">✨ Generate</b>{" "}
+              to draft close-oriented follow-ups, or approved ones live in <b>To approve</b>.
+            </p>
+          </Card>
+        )}
+      </section>
+
+      {/* History timeline — every capture, meeting stays at the top */}
+      {appts.length > 1 && (
+        <section className="flex flex-col gap-2">
+          <h2 className="text-lg font-semibold">History</h2>
+          {[...appts].reverse().map((a) => (
+            <details key={a.id} className="rounded-card border border-hairline bg-white/[0.04]">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 p-3">
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-medium text-accent">
+                    {a.record_type ? RECORD_LABEL[a.record_type] ?? titleCase(a.record_type) : "Capture"}
+                  </span>
+                  <span className="truncate text-xs text-muted">{shortDate(a.created_at)}</span>
+                </span>
+                <span className="text-muted">⌄</span>
+              </summary>
+              <div className="px-3 pb-3 text-sm text-muted">
+                {a.summary || "No summary."}
+                {a.talk_ratio != null && (
+                  <span className="mt-1 block text-xs">You spoke {a.talk_ratio}%</span>
+                )}
+              </div>
+            </details>
           ))}
         </section>
       )}

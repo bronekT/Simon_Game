@@ -19,6 +19,23 @@ const KIND_LABEL: Record<QueueAction["kind"], string> = {
   calendar_event: "Calendar event",
 };
 
+// A flat list of approvable actions (used inside a single deal). Same one-tap
+// ✓ / 📱 / ✕ controls and edit popup as the Approve screen.
+export function ActionsInline({ actions }: { actions: QueueAction[] }) {
+  const [open, setOpen] = useState<QueueAction | null>(null);
+  if (actions.length === 0) return null;
+  return (
+    <>
+      <div className="flex flex-col gap-2">
+        {actions.map((a) => (
+          <ActionRow key={a.id} a={a} onEdit={() => setOpen(a)} />
+        ))}
+      </div>
+      {open && <ActionModal action={open} onClose={() => setOpen(null)} />}
+    </>
+  );
+}
+
 export interface LeadGroup {
   dealId: string;
   clientName: string;
