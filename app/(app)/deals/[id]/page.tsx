@@ -6,6 +6,7 @@ import { DoorWantLine, EngagementChips } from "@/components/DealMeta";
 import { StatusSelect } from "@/components/StatusSelect";
 import { SubmitButton } from "@/components/SubmitButton";
 import { ActionsInline, type QueueAction } from "@/components/ApproveList";
+import { PendingOverlay } from "@/components/PendingOverlay";
 import { processTranscript } from "@/app/(app)/capture/actions";
 import { bumpFollowups, deleteDeal, generateFollowups } from "./quick-actions";
 import { money, titleCase, dateTime, shortDate } from "@/lib/format";
@@ -110,12 +111,27 @@ export default async function DealDetail({
           <Link href="/deals" className="text-sm text-accent">
             ← Deals
           </Link>
-          <Link
-            href={`/deals/${deal.id}/edit`}
-            className="rounded-full border border-hairline px-3 py-1 text-xs font-medium text-text active:bg-white/10"
-          >
-            ✎ Edit
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/deals/${deal.id}/edit`}
+              className="rounded-full border border-hairline px-3 py-1 text-xs font-medium text-text active:bg-white/10"
+            >
+              ✎ Edit
+            </Link>
+            <details className="relative">
+              <summary className="flex h-7 w-7 cursor-pointer list-none items-center justify-center rounded-full border border-hairline text-muted">
+                ⋯
+              </summary>
+              <div className="absolute right-0 z-10 mt-2 w-44 rounded-card border border-hairline bg-bg p-2 shadow-xl">
+                <form action={deleteDeal}>
+                  <input type="hidden" name="id" value={deal.id} />
+                  <button className="w-full rounded-lg bg-risk/15 px-3 py-2 text-sm font-medium text-risk">
+                    Delete lead
+                  </button>
+                </form>
+              </div>
+            </details>
+          </div>
         </div>
         <div className="mt-2 flex items-start justify-between gap-3">
           <h1 className="text-2xl font-semibold">{deal.client_name}</h1>
@@ -398,21 +414,9 @@ export default async function DealDetail({
             className="w-full rounded-xl border border-hairline bg-white/[0.04] px-3 py-2 text-sm text-muted file:mr-3 file:rounded-full file:border-0 file:bg-accent file:px-3 file:py-1 file:text-bg"
           />
           <SubmitButton pendingLabel="Updating…">Update from this</SubmitButton>
+          <PendingOverlay label="Updating this client…" />
         </form>
       </Card>
-
-      {/* Delete */}
-      <details className="rounded-card border border-hairline bg-white/[0.02]">
-        <summary className="cursor-pointer list-none p-4 text-sm text-muted">
-          Delete this deal…
-        </summary>
-        <form action={deleteDeal} className="px-4 pb-4">
-          <input type="hidden" name="id" value={deal.id} />
-          <button className="w-full rounded-full bg-risk/15 py-2.5 text-sm font-medium text-risk active:scale-[0.99]">
-            Delete permanently
-          </button>
-        </form>
-      </details>
     </main>
   );
 }

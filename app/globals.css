@@ -17,6 +17,12 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Indeterminate top progress bar (route loading) */
+@keyframes barslide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+
 /* Larger default tap targets and no tap highlight (mobile-first, Section 10). */
 button,
 a {

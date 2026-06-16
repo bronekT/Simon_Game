@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { processTranscript } from "./actions";
 import { Card } from "@/components/Card";
 import { SubmitButton } from "@/components/SubmitButton";
+import { PendingOverlay } from "@/components/PendingOverlay";
 import { dateTime } from "@/lib/format";
 import type { Deal } from "@/lib/types";
 
@@ -118,6 +119,7 @@ export default async function Capture({
         )}
 
         <SubmitButton pendingLabel="Analyzing…">Analyze</SubmitButton>
+        <PendingOverlay label="Analyzing your transcript…" />
 
         <p className="text-center text-xs text-muted">
           Takes ~10–20 seconds. Emails &amp; calendar events are proposed in

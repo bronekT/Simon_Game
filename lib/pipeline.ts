@@ -3,6 +3,7 @@ import { extract, type SettingsContext } from "./ai/extract";
 import { writeFollowups } from "./ai/write";
 import { safeDraftType, type Draft, type Extraction } from "./ai/schema";
 import { chooseMatch, type DealCandidate } from "./match";
+import { bookingConfirmation, eventDescription } from "./templates";
 import type { DealStatus } from "./types";
 
 export type PipelineResult =
@@ -102,9 +103,17 @@ export async function analyzeAppointment(
     coachNote = writer.coach_note;
     coaching = writer.coaching;
   }
-  if (data.record_type === "booking_call" && data.confirmation_sms) {
+  if (data.record_type === "booking_call") {
+    // A polished, structured confirmation (emoji, address, time) every time.
+    const confirmation = bookingConfirmation({
+      name: data.client.name,
+      startIso: data.proposed_event?.start ?? data.followup_at,
+      locationType: data.location_type,
+      address: data.client.address,
+      showroomAddress: settings.showroom_address,
+    });
     drafts = [
-      { type: "confirmation", channel: "sms", subject: "", body: data.confirmation_sms },
+      { type: "confirmation", channel: "sms", subject: "", body: confirmation },
       ...drafts,
     ];
   }
@@ -165,7 +174,8 @@ export async function analyzeAppointment(
     dealId,
     appointmentId,
     drafts,
-    proposedEvent: data.proposed_event,
+    data,
+    settings,
     recordType: data.record_type,
   });
 
@@ -179,11 +189,13 @@ async function enqueueActions(
     dealId: string;
     appointmentId: string;
     drafts: Draft[];
-    proposedEvent: Extraction["proposed_event"];
+    data: Extraction;
+    settings: SettingsContext;
     recordType: string;
   },
 ) {
-  const { userId, dealId, appointmentId, drafts, proposedEvent, recordType } = args;
+  const { userId, dealId, appointmentId, drafts, data, settings, recordType } = args;
+  const proposedEvent = data.proposed_event;
 
   const { data: contact } = await supabase
     .from("deals")
@@ -218,18 +230,27 @@ async function enqueueActions(
   });
 
   if (proposedEvent) {
+    const where =
+      data.location_type === "showroom"
+        ? settings.showroom_address ?? proposedEvent.location ?? ""
+        : data.client.address ?? proposedEvent.location ?? "";
+    const place = data.location_type === "showroom" ? "Showroom" : "Home visit";
     rows.push({
       user_id: userId,
       deal_id: dealId,
       kind: "calendar_event",
       payload: {
-        // Always lead the event title with the client's name.
-        title: proposedEvent.title?.toLowerCase().includes(clientName.toLowerCase())
-          ? proposedEvent.title
-          : `${clientName} — ${proposedEvent.title || "Doors visit"}`,
+        // Name + what + where, with a rich description for the Google event.
+        title: `${clientName} — Doors (${place})`,
         start: proposedEvent.start,
-        location: proposedEvent.location ?? "",
-        notes: proposedEvent.notes ?? "",
+        location: where,
+        notes: eventDescription({
+          summary: data.summary,
+          doorType: data.door_type,
+          doorCount: data.door_count,
+          address: where,
+          locationType: data.location_type,
+        }),
       },
       status: "proposed",
       idempotency_key: `${appointmentId}-event`,

@@ -2,145 +2,109 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/Card";
 import { DoorWantLine } from "@/components/DealMeta";
-import { shortDate, TZ, torontoOffset } from "@/lib/format";
-import { OPEN_STATUSES, type Deal } from "@/lib/types";
-import { snoozeCall, clearCall } from "./actions";
+import { dateTime } from "@/lib/format";
+import type { DoorType } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
+interface CallRow {
+  id: string;
+  record_type: string | null;
+  created_at: string;
+  summary: string | null;
+  client_name: string;
+  door_type: DoorType | null;
+  door_count: number | null;
+  address: string | null;
+  event: { start?: string; location?: string } | null;
+  dealId: string | null;
+}
+
+const LABEL: Record<string, string> = {
+  booking_call: "Booking call",
+  followup_call: "Follow-up call",
+};
+
 export default async function Calls() {
   const supabase = await createClient();
-  const { data } = await supabase.from("deals").select("*");
-  const all = (data ?? []) as Deal[];
-  const open = all.filter((d) => OPEN_STATUSES.includes(d.status));
+  const { data } = await supabase
+    .from("appointments")
+    .select("id, record_type, created_at, summary, analysis, deal_id, deals(client_name, door_type, door_count, address)")
+    .in("record_type", ["booking_call", "followup_call"])
+    .order("created_at", { ascending: false })
+    .limit(40);
 
-  // End of "today" in Toronto, as an instant.
-  const todayStr = new Intl.DateTimeFormat("en-CA", {
-    timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit",
-  }).format(new Date());
-  const endOfTodayMs = Date.parse(`${todayStr}T23:59:59${torontoOffset()}`);
-
-  const due = (d: Deal) =>
-    d.followup_at != null && new Date(d.followup_at).getTime() <= endOfTodayMs;
-
-  // 1) Call today: follow-ups due or overdue (overdue first).
-  const callToday = open
-    .filter(due)
-    .sort((a, b) => (a.followup_at! < b.followup_at! ? -1 : 1));
-  const usedIds = new Set(callToday.map((d) => d.id));
-
-  // 2) New leads (never worked yet).
-  const newLeads = open.filter((d) => d.status === "new" && !usedIds.has(d.id));
-  newLeads.forEach((d) => usedIds.add(d.id));
-
-  // 3) Going cold (flagged at-risk, not already listed).
-  const goingCold = open.filter(
-    (d) => (d as Deal & { at_risk?: boolean }).at_risk && !usedIds.has(d.id),
-  );
-
-  const total = callToday.length + newLeads.length + goingCold.length;
+  const calls: CallRow[] = (data ?? []).map((a) => {
+    const deal = Array.isArray(a.deals) ? a.deals[0] : (a.deals as Record<string, unknown> | null);
+    const ev = (a.analysis as { proposed_event?: { start?: string; location?: string } } | null)?.proposed_event ?? null;
+    return {
+      id: a.id as string,
+      record_type: a.record_type as string | null,
+      created_at: a.created_at as string,
+      summary: a.summary as string | null,
+      client_name: (deal?.client_name as string) ?? "Unknown",
+      door_type: (deal?.door_type as DoorType) ?? null,
+      door_count: (deal?.door_count as number) ?? null,
+      address: (deal?.address as string) ?? null,
+      event: ev,
+      dealId: (a.deal_id as string) ?? null,
+    };
+  });
 
   return (
     <main className="flex flex-col gap-4">
       <header className="pt-2">
         <h1 className="text-2xl font-semibold">Calls</h1>
         <p className="mt-1 text-sm text-muted">
-          Your call list for today — new leads, people you didn&apos;t reach, and
-          due follow-ups. Nobody slips through.
+          Every call you captured — what it was about, what doors, and when you booked.
         </p>
       </header>
 
-      {total === 0 ? (
+      {calls.length === 0 ? (
         <Card>
           <p className="text-sm text-muted">
-            All clear — no calls due. New leads and due follow-ups will appear here.
+            No calls yet. When you capture a phone call in <b className="text-text">Capture</b>{" "}
+            (or it arrives from your recorder), it shows up here.
           </p>
         </Card>
       ) : (
-        <>
-          <CallSection title="📞 Call today" subtitle="due & overdue" deals={callToday} overdueMs={endOfTodayMs} />
-          <CallSection title="🆕 New leads" subtitle="qualify & book a visit" deals={newLeads} />
-          <CallSection title="⚠️ Going cold" subtitle="no activity 3+ days" deals={goingCold} />
-        </>
+        <div className="flex flex-col gap-3">
+          {calls.map((c) => {
+            const booked = c.event?.start;
+            const where = c.event?.location || c.address;
+            const inner = (
+              <Card className="!p-3.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="rounded-full bg-task/15 px-2 py-0.5 text-[11px] font-medium text-task">
+                    {c.record_type ? LABEL[c.record_type] ?? c.record_type : "Call"}
+                  </span>
+                  <span className="text-[11px] text-muted">{dateTime(c.created_at)}</span>
+                </div>
+
+                <p className="mt-2 font-semibold">{c.client_name}</p>
+                {(c.door_type || c.door_count) && (
+                  <p className="mt-0.5 text-sm">
+                    <DoorWantLine type={c.door_type} count={c.door_count} />
+                  </p>
+                )}
+                {c.summary && <p className="mt-1 line-clamp-2 text-sm text-muted">{c.summary}</p>}
+
+                {booked && (
+                  <div className="mt-2 rounded-xl border border-won/30 bg-won/5 px-3 py-2 text-xs">
+                    <span className="text-won">📅 Booked</span> · {dateTime(booked)}
+                    {where && <span className="text-muted"> · 📍 {where}</span>}
+                  </div>
+                )}
+              </Card>
+            );
+            return c.dealId ? (
+              <Link key={c.id} href={`/deals/${c.dealId}`}>{inner}</Link>
+            ) : (
+              <div key={c.id}>{inner}</div>
+            );
+          })}
+        </div>
       )}
     </main>
-  );
-}
-
-function CallSection({
-  title,
-  subtitle,
-  deals,
-  overdueMs,
-}: {
-  title: string;
-  subtitle: string;
-  deals: Deal[];
-  overdueMs?: number;
-}) {
-  if (deals.length === 0) return null;
-  return (
-    <section className="flex flex-col gap-2">
-      <h2 className="text-sm font-semibold text-muted">
-        {title} <span className="font-normal text-muted/70">· {deals.length} · {subtitle}</span>
-      </h2>
-      {deals.map((d) => (
-        <CallRow key={d.id} deal={d} overdueMs={overdueMs} />
-      ))}
-    </section>
-  );
-}
-
-function CallRow({ deal: d, overdueMs }: { deal: Deal; overdueMs?: number }) {
-  const tel = (d.phone ?? "").replace(/[^\d+]/g, "");
-  const overdue =
-    overdueMs != null && d.followup_at != null && new Date(d.followup_at).getTime() < Date.now();
-
-  return (
-    <Card className="!p-3">
-      <div className="flex items-center gap-3">
-        <Link href={`/deals/${d.id}`} className="min-w-0 flex-1 active:opacity-70">
-          <p className="truncate font-medium">{d.client_name}</p>
-          <p className="mt-0.5 truncate text-sm">
-            {d.door_type || d.door_count ? (
-              <DoorWantLine type={d.door_type} count={d.door_count} />
-            ) : (
-              <span className="text-muted">{d.next_action ?? "New lead"}</span>
-            )}
-          </p>
-          <p className="mt-0.5 text-xs text-muted">
-            {d.phone ? d.phone : "no number"}
-            {d.followup_at && (
-              <span className={overdue ? "text-risk" : "text-followup"}> · due {shortDate(d.followup_at)}</span>
-            )}
-          </p>
-        </Link>
-
-        <div className="flex shrink-0 flex-col items-end gap-1.5">
-          {tel ? (
-            <a
-              href={`tel:${tel}`}
-              className="flex items-center gap-1 rounded-full bg-won/20 px-3 py-1.5 text-sm font-semibold text-won active:scale-95"
-            >
-              📞 Call
-            </a>
-          ) : (
-            <Link href={`/deals/${d.id}/edit`} className="rounded-full border border-hairline px-3 py-1.5 text-xs text-muted">
-              Add number
-            </Link>
-          )}
-          <div className="flex gap-1.5">
-            <form action={snoozeCall}>
-              <input type="hidden" name="id" value={d.id} />
-              <button className="rounded-full border border-hairline px-2.5 py-1 text-[11px] text-muted">No answer · 1d</button>
-            </form>
-            <form action={clearCall}>
-              <input type="hidden" name="id" value={d.id} />
-              <button className="rounded-full border border-hairline px-2.5 py-1 text-[11px] text-won">Reached ✓</button>
-            </form>
-          </div>
-        </div>
-      </div>
-    </Card>
   );
 }
