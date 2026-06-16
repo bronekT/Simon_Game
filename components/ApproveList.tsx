@@ -27,28 +27,66 @@ export function ApproveList({ actions }: { actions: QueueAction[] }) {
     <>
       <div className="flex flex-col gap-3">
         {actions.map((a) => (
-          <button key={a.id} onClick={() => setOpen(a)} className="text-left">
-            <Card className="active:bg-white/[0.05]">
-              <div className="flex items-center justify-between gap-2">
+          <Card key={a.id} className="!p-3">
+            <div className="flex items-start gap-2">
+              {/* Tap the content to edit in a popup */}
+              <button onClick={() => setOpen(a)} className="min-w-0 flex-1 text-left active:opacity-70">
                 <div className="flex items-center gap-2">
                   <span className="rounded-full bg-task/15 px-2 py-0.5 text-xs font-medium text-task">
                     {KIND_LABEL[a.kind]}
                   </span>
-                  {a.status === "failed" && (
-                    <span className="rounded-full bg-risk/15 px-2 py-0.5 text-xs font-medium text-risk">
-                      Failed · retry
-                    </span>
-                  )}
+                  <span className="truncate text-xs text-muted">{a.client_name}</span>
                 </div>
-                <span className="truncate text-sm text-muted">{a.client_name}</span>
-              </div>
-              <p className="mt-2 line-clamp-2 text-sm">{preview(a)}</p>
-            </Card>
-          </button>
+                <p className="mt-1.5 line-clamp-2 text-sm">{preview(a)}</p>
+                <span className="mt-1 inline-block text-[11px] text-accent">tap to edit</span>
+              </button>
+
+              {/* Quick approve / dismiss without opening */}
+              <form className="flex shrink-0 flex-col gap-2">
+                <PayloadInputs action={a} />
+                <button
+                  type="submit"
+                  formAction={approveAction}
+                  aria-label="Approve"
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-won/20 text-lg text-won active:scale-90"
+                >
+                  ✓
+                </button>
+                <button
+                  type="submit"
+                  formAction={dismissAction}
+                  aria-label="Dismiss"
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-risk/15 text-lg text-risk active:scale-90"
+                >
+                  ✕
+                </button>
+              </form>
+            </div>
+          </Card>
         ))}
       </div>
 
       {open && <ActionModal action={open} onClose={() => setOpen(null)} />}
+    </>
+  );
+}
+
+// Hidden inputs carrying the current payload, so a one-tap ✓ approves as-is.
+function PayloadInputs({ action }: { action: QueueAction }) {
+  const p = action.payload;
+  const fields =
+    action.kind === "email"
+      ? { subject: p.subject ?? "", body: p.body ?? "", to: p.to ?? "" }
+      : action.kind === "sms"
+        ? { body: p.body ?? "", to: p.to ?? "" }
+        : { title: p.title ?? "", start: p.start ?? "", location: p.location ?? "", notes: p.notes ?? "" };
+  return (
+    <>
+      <input type="hidden" name="id" value={action.id} />
+      <input type="hidden" name="kind" value={action.kind} />
+      {Object.entries(fields).map(([k, v]) => (
+        <input key={k} type="hidden" name={k} value={v} />
+      ))}
     </>
   );
 }

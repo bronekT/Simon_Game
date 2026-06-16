@@ -56,17 +56,20 @@ Where the meeting happens (for booking_call: where the FUTURE visit will be):
 Use null only if truly indeterminable.
 
 ==================== STEP 3: WHO + WHAT DOORS ====================
-- client.name = the CUSTOMER's name (NOT the salesperson). The salesperson is
-  the one selling/asking; the customer is the homeowner/buyer. If the customer's
-  name is never stated, use null — do NOT put the salesperson's name here, and do
-  NOT invent a name.
-- client.address = the customer's address ONLY if clearly stated; else null. Do
-  not guess or assemble a partial address.
+- client.name = the CUSTOMER's name. LOOK HARD for it anywhere: a greeting
+  ("Hi, this is John", "It's Maria"), the salesperson addressing them ("Thanks
+  Maria", "Nice to meet you, Mr. Smith"), a callback name, a signature, or
+  contact details. Use at least the first name. It is NOT the salesperson (the
+  one selling/measuring/quoting). If a name truly never appears, use null — never
+  invent one, and never use the salesperson's name.
+- client.address = the customer's address if stated anywhere (even partial, e.g.
+  "12 Oak Street" or just the street); else null. Don't invent.
 - door_type = the MAIN door type the client is after, one of: entry, patio,
   storm, french, sliding, garage, interior, bifold, screen, other. null if unclear.
 - door_count = how many doors they want (integer), or null if not stated.
-- quote_price = a specific price quoted or a ballpark number given (just the
-  number, CAD), or null if no price was mentioned. "around eight thousand" → 8000.
+- quote_price = the price the SALESPERSON quoted or any specific number discussed
+  (just the number, CAD). "around eight grand" / "eight thousand" → 8000,
+  "$3,500" → 3500. null only if no number was mentioned at all.
 - service_type = "doors" (this business only does doors) unless clearly otherwise.
 - In "summary", lead with what they want in plain words — door type(s), how many,
   material/colour/style if mentioned, and the reason — then their pain and urgency.

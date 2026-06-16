@@ -98,14 +98,17 @@ export default async function DealDetail({
   const drafts = (draftRows ?? []) as DraftRow[];
 
   return (
-    <main className="flex flex-col gap-5">
+    <main className="flex flex-col gap-4">
       <header className="pt-2">
         <div className="flex items-center justify-between">
           <Link href="/deals" className="text-sm text-accent">
             ← Deals
           </Link>
-          <Link href={`/deals/${deal.id}/edit`} className="text-sm text-accent">
-            Edit
+          <Link
+            href={`/deals/${deal.id}/edit`}
+            className="rounded-full border border-hairline px-3 py-1 text-xs font-medium text-text active:bg-white/10"
+          >
+            ✎ Edit
           </Link>
         </div>
         <div className="mt-2 flex items-start justify-between gap-3">
@@ -241,16 +244,13 @@ export default async function DealDetail({
 
           {/* Detailed per-lead coaching: exact phrasing + technique */}
           {(appt.analysis?.coaching?.length ?? 0) > 0 && (
-            <Card>
-              <p className="mb-3 text-sm font-semibold text-accent">
-                🎯 Coaching — how to play it next time
-              </p>
-              <div className="flex flex-col gap-3">
+            <Disclosure title="🎯 Coaching — how to play it next time" tone="accent">
+              <div className="flex flex-col gap-3 text-left">
                 {appt.analysis!.coaching!.map((c, i) => (
                   <div key={i} className="border-l-2 border-accent/40 pl-3">
                     {c.situation && <p className="text-xs text-muted">{c.situation}</p>}
                     {c.better && (
-                      <p className="mt-1 text-sm">
+                      <p className="mt-1 text-sm text-text">
                         <span className="text-won">Try: </span>
                         <span className="italic">“{c.better}”</span>
                       </p>
@@ -263,7 +263,7 @@ export default async function DealDetail({
                   </div>
                 ))}
               </div>
-            </Card>
+            </Disclosure>
           )}
         </section>
       ) : (
