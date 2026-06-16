@@ -8,8 +8,15 @@ import { generate } from "./actions";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-export default async function Coaching({ params }: { params: Promise<{ id: string }> }) {
+export default async function Coaching({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ error?: string }>;
+}) {
   const { id } = await params;
+  const { error } = await searchParams;
   const supabase = await createClient();
 
   const { data: deal } = await supabase.from("deals").select("client_name").eq("id", id).maybeSingle();
@@ -17,15 +24,14 @@ export default async function Coaching({ params }: { params: Promise<{ id: strin
 
   const { data: appt } = await supabase
     .from("appointments")
-    .select("analysis")
+    .select("analysis, transcript")
     .eq("deal_id", id)
-    .not("record_type", "is", null)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
   const deep = (appt?.analysis as { deep_coaching?: string } | null)?.deep_coaching ?? null;
-  const hasAppt = Boolean(appt);
+  const hasAppt = Boolean(appt && ((appt.transcript as string) ?? "").trim().length >= 20);
 
   return (
     <main className="flex flex-col gap-4">
@@ -33,6 +39,12 @@ export default async function Coaching({ params }: { params: Promise<{ id: strin
         <Link href={`/deals/${id}`} className="text-sm text-accent">← {deal.client_name}</Link>
         <h1 className="mt-2 text-2xl font-semibold">🎓 Detailed coaching</h1>
       </header>
+
+      {error && (
+        <Card className="border-risk/40">
+          <p className="text-sm text-risk">{error}</p>
+        </Card>
+      )}
 
       {!hasAppt ? (
         <Card>

@@ -1,5 +1,5 @@
 import { getAnthropic, MODELS, responseText } from "./anthropic";
-import { companyKnowledge } from "../knowledge/company";
+import { companyKnowledge, COMPANY } from "../knowledge/company";
 
 // On-demand deep coaching: a long, detailed breakdown of one appointment.
 // Uses the FULL transcript (only run when the user taps "generate", for cost).
@@ -10,7 +10,7 @@ export async function generateDeepCoaching(transcript: string): Promise<string> 
     max_tokens: 2600,
     system:
       `${companyKnowledge()}\n\n` +
-      `You are an elite door-sales coach reviewing ONE appointment transcript for ${"Tony"} (the salesperson, "Me" in the transcript). Produce a DETAILED, specific, practical breakdown. Use clear section headers (plain text, no markdown symbols like # or *) and short lines. Cover, in this order:
+      `You are an elite door-sales coach reviewing ONE appointment transcript for ${COMPANY.rep} (the salesperson, "Me" in the transcript). Produce a DETAILED, specific, practical breakdown. Use clear section headers (plain text, no markdown symbols like # or *) and short lines. Cover, in this order:
 
 1) WHAT WENT WELL — concrete moments, quote what was actually said.
 2) WHAT WENT WRONG / MISSED — specific mistakes or missed opportunities.

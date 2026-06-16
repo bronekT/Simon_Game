@@ -12,9 +12,10 @@ export function getAnthropic(): Anthropic {
 }
 
 // Model IDs (verified current against the Anthropic docs — SPEC.md Section 2).
-// Haiku for cheap extraction, Sonnet for higher-quality writing/coaching.
+// Sonnet for extraction too — accuracy on names/dates matters more than the
+// small extra cost (a few cents per transcript).
 export const MODELS = {
-  extract: "claude-haiku-4-5",
+  extract: "claude-sonnet-4-6",
   write: "claude-sonnet-4-6",
 } as const;
 

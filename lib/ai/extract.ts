@@ -79,16 +79,21 @@ Use null only if truly indeterminable.
   yes to proceed; "lost" if they clearly went with a competitor, cancelled, or
   declined. Otherwise null. (This moves the deal to Won/Lost.)
 
-==================== TIMING (resolve relative dates!) ====================
-- Use the "Current time" given below to turn RELATIVE times into absolute ISO
-  8601: "tomorrow at 9" → next day 09:00; "next Tuesday 2pm" → that date 14:00;
-  "in an hour" → now + 1h. Always output absolute ISO, never the words.
+==================== TIMING (use the DATE REFERENCE below — be exact!) ====================
+- A DATE REFERENCE table (America/Toronto) is provided in the user message with
+  today and the upcoming weekdays mapped to exact dates. USE IT.
+- When the transcript names a weekday + time ("Thursday 7pm", "this Friday at
+  10"), find THAT weekday in the table and use its exact date at the stated time.
+  Do NOT shift to a different day. "Thursday 7pm" must land on the Thursday date,
+  19:00 — never Friday.
+- "tomorrow" = the day after TODAY in the table; "today" = TODAY.
+- Output ISO 8601 WITH the Toronto UTC offset shown in the reference (e.g.
+  2026-06-18T19:00:00-04:00). Never output bare/naive times.
 - proposed_event = set whenever a specific meeting/visit time is agreed OR
-  requested — even a quick text like "book me tomorrow at 9" counts. Fill title
-  (e.g. "Doors estimate"), start (absolute ISO), location, notes.
-- followup_at = when the NEXT touch should realistically happen. Keep it sensible
-  and near-term (usually within 1–7 days) unless a specific later date was asked.
-  Output ISO 8601, or null if unclear.
+  requested — even a quick text like "book me Thursday at 9" counts. Fill title,
+  start (absolute ISO w/ offset), location, notes.
+- followup_at = when the NEXT touch should realistically happen (usually 1–7 days
+  out) unless a specific date was asked. ISO 8601 w/ offset, or null.
 
 ==================== STEP 4: FILL THE REST ====================
 - scores.* = integers 0–10 rating the salesperson on each skill (rapport,
@@ -119,7 +124,8 @@ export async function extract(
   const context = `Company: ${settings.company_name ?? "(unknown)"}
 Showroom address: ${settings.showroom_address ?? "(none)"}
 Email signature: ${settings.email_signature ?? "(none)"}
-Current time: ${new Date().toISOString()}
+
+${dateReference()}
 
 TRANSCRIPT:
 """
@@ -170,4 +176,43 @@ Return the JSON object now.`;
 
 function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
+}
+
+// A concrete date table in the business's timezone (Ontario / America/Toronto)
+// so the model can resolve "Thursday 7pm" to the EXACT date — its weakest spot.
+function dateReference(): string {
+  const tz = "America/Toronto";
+  const now = new Date();
+
+  const partsFor = (d: Date) => {
+    const f = new Intl.DateTimeFormat("en-CA", {
+      timeZone: tz, weekday: "long", year: "numeric", month: "2-digit", day: "2-digit",
+    });
+    const p: Record<string, string> = {};
+    for (const part of f.formatToParts(d)) p[part.type] = part.value;
+    return { weekday: p.weekday, date: `${p.year}-${p.month}-${p.day}` };
+  };
+
+  const time = new Intl.DateTimeFormat("en-CA", {
+    timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: true,
+  }).format(now);
+
+  // Toronto offset like "GMT-4" → "-04:00".
+  const tzName = new Intl.DateTimeFormat("en-US", { timeZone: tz, timeZoneName: "shortOffset" })
+    .formatToParts(now).find((p) => p.type === "timeZoneName")?.value ?? "GMT-4";
+  const m = tzName.match(/GMT([+-])(\d{1,2})/);
+  const offset = m ? `${m[1]}${m[2].padStart(2, "0")}:00` : "-04:00";
+
+  const today = partsFor(now);
+  const lines: string[] = [];
+  for (let i = 0; i < 10; i++) {
+    const d = new Date(now.getTime() + i * 86_400_000);
+    const p = partsFor(d);
+    lines.push(`  ${i === 0 ? "TODAY  " : "       "}${p.weekday.padEnd(9)} ${p.date}`);
+  }
+
+  return `DATE REFERENCE — America/Toronto (UTC offset ${offset}):
+Right now it is ${today.weekday}, ${today.date}, ${time} (Toronto).
+${lines.join("\n")}
+Resolve any weekday/relative time in the transcript using this exact table.`;
 }
