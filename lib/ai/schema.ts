@@ -118,6 +118,41 @@ const proposedEvent = z.preprocess(
     .nullable(),
 );
 
+// The spoken meeting time, broken into ATOMIC parts (no date math by the model).
+// Our deterministic resolver (lib/datetime.ts) turns these into an exact instant,
+// so the weekday can never silently drift (Thursday must stay Thursday).
+const meetingWhen = z
+  .preprocess(
+    (v) => (v && typeof v === "object" && !Array.isArray(v) ? v : null),
+    z
+      .object({
+        weekday: looseStr,
+        relative: looseStr,
+        qualifier: looseStr,
+        month: looseNumNullable,
+        day: looseNumNullable,
+        hour: looseNumNullable,
+        minute: looseNumNullable,
+        meridiem: looseStr,
+      })
+      .partial()
+      .nullable(),
+  )
+  .transform((w) =>
+    w == null
+      ? null
+      : {
+          weekday: w.weekday ?? null,
+          relative: w.relative ?? null,
+          qualifier: w.qualifier ?? null,
+          month: w.month ?? null,
+          day: w.day ?? null,
+          hour: w.hour ?? null,
+          minute: w.minute ?? null,
+          meridiem: w.meridiem ?? null,
+        },
+  );
+
 export const ExtractionSchema = z.object({
   record_type: recordType,
   location_type: looseEnumNullable(LOCATION_VALUES),
@@ -142,6 +177,7 @@ export const ExtractionSchema = z.object({
   what_went_wrong: looseText,
   next_action: looseText,
   followup_at: looseStr,
+  meeting_when: meetingWhen,
   proposed_event: proposedEvent,
   drafts: z.preprocess((v) => (Array.isArray(v) ? v : []), z.array(DraftSchema)).default([]),
   confirmation_sms: looseStr,

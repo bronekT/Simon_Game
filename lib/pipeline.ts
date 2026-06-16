@@ -3,6 +3,7 @@ import { extract, type SettingsContext } from "./ai/extract";
 import { writeFollowups } from "./ai/write";
 import { safeDraftType, type Draft, type Extraction } from "./ai/schema";
 import { chooseMatch, type DealCandidate } from "./match";
+import { resolveWhen } from "./datetime";
 import { bookingConfirmation, eventDescription } from "./templates";
 import type { DealStatus } from "./types";
 
@@ -81,6 +82,27 @@ export async function analyzeAppointment(
   }
   const data = result.data;
   const isNote = data.record_type === "note";
+
+  // ── BULLETPROOF DATE RESOLUTION ───────────────────────────────────────────
+  // Never trust the model's date arithmetic. If the transcript named a time, the
+  // model put the atomic parts into `meeting_when`; we compute the exact Toronto
+  // instant in CODE and OVERRIDE whatever date the model guessed. This is what
+  // stops "Thursday 7pm" from ever drifting to Friday.
+  const resolvedStart = resolveWhen(data.meeting_when);
+  if (resolvedStart) {
+    if (data.proposed_event) {
+      data.proposed_event.start = resolvedStart;
+    } else {
+      data.proposed_event = {
+        title: `${data.client.name ?? "Client"} — Doors`,
+        start: resolvedStart,
+        location: "",
+        notes: "",
+      };
+    }
+    // For a booking, the agreed visit IS the next touch — keep them in lockstep.
+    if (data.record_type === "booking_call") data.followup_at = resolvedStart;
+  }
 
   // 2 (match). Resolve which deal this belongs to. A pure "note" is just logged:
   // we never create a brand-new deal for it (only attach if it clearly matches).

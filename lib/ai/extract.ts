@@ -17,7 +17,9 @@ const SYSTEM = `You are the extraction engine for a DOOR specialist's AI Sales O
 storm, French, sliding, garage, interior, bifold, and screen doors. You read ONE
 call or meeting transcript and return a single structured JSON object.
 
-Return ONLY the JSON object — no prose, no markdown, no code fences.
+Read the ENTIRE transcript carefully from start to finish — names, addresses, and
+especially the agreed meeting time often appear in the last few lines. Do not stop
+early. Then return ONLY the JSON object — no prose, no markdown, no code fences.
 
 ==================== STEP 1: CLASSIFY record_type ====================
 Decide what KIND of recording this is. This drives everything downstream.
@@ -79,19 +81,41 @@ Use null only if truly indeterminable.
   yes to proceed; "lost" if they clearly went with a competitor, cancelled, or
   declined. Otherwise null. (This moves the deal to Won/Lost.)
 
-==================== TIMING (use the DATE REFERENCE below — be exact!) ====================
-- A DATE REFERENCE table (America/Toronto) is provided in the user message with
-  today and the upcoming weekdays mapped to exact dates. USE IT.
-- When the transcript names a weekday + time ("Thursday 7pm", "this Friday at
-  10"), find THAT weekday in the table and use its exact date at the stated time.
-  Do NOT shift to a different day. "Thursday 7pm" must land on the Thursday date,
-  19:00 — never Friday.
-- "tomorrow" = the day after TODAY in the table; "today" = TODAY.
-- Output ISO 8601 WITH the Toronto UTC offset shown in the reference (e.g.
+==================== TIMING — meeting_when is the SOURCE OF TRUTH ====================
+This is the single most important field to get right. DO NOT do any date
+arithmetic yourself (you are bad at it). Instead, transcribe the spoken time into
+ATOMIC PARTS and let our system compute the exact calendar date deterministically.
+
+Whenever a future meeting/visit time is mentioned, agreed, or requested, fill
+"meeting_when" with the time EXACTLY AS SPOKEN — do not convert, do not shift:
+  meeting_when: {
+    "weekday":  one of monday|tuesday|wednesday|thursday|friday|saturday|sunday
+                if a weekday is named, else null,
+    "relative": "today" or "tomorrow" if said (not a weekday), else null,
+    "qualifier":"this" or "next" if said (e.g. "next Friday" → "next"), else null,
+    "month":    1-12 ONLY if an explicit calendar month is given (e.g. "June 18"),
+    "day":      1-31 ONLY if an explicit day-of-month is given,
+    "hour":     the hour number spoken (1-12), else null,
+    "minute":   minutes 0-59 (use 0 if an hour was given with no minutes), else null,
+    "meridiem": "am" or "pm" if stated or clearly implied, else null
+  }
+EXAMPLES (copy this behavior exactly):
+  "Thursday at 7pm"     → {"weekday":"thursday","qualifier":null,"relative":null,"month":null,"day":null,"hour":7,"minute":0,"meridiem":"pm"}
+  "next Monday at 5"    → {"weekday":"monday","qualifier":"next","relative":null,"month":null,"day":null,"hour":5,"minute":0,"meridiem":null}
+  "tomorrow at 9:30am"  → {"weekday":null,"qualifier":null,"relative":"tomorrow","month":null,"day":null,"hour":9,"minute":30,"meridiem":"am"}
+  "June 18th at 2pm"    → {"weekday":null,"qualifier":null,"relative":null,"month":6,"day":18,"hour":2,"minute":0,"meridiem":"pm"}
+RE-CHECK before you answer: read the time phrase in the transcript again and make
+sure the weekday/hour/meridiem in meeting_when match the words EXACTLY. If no
+future time is discussed at all, set meeting_when to null.
+
+Then, as a best-effort secondary copy (our system will RECOMPUTE and override the
+real date from meeting_when, so do not stress the arithmetic):
+- A DATE REFERENCE table (America/Toronto) is in the user message — use it to fill
+  proposed_event.start as ISO 8601 WITH the Toronto offset (e.g.
   2026-06-18T19:00:00-04:00). Never output bare/naive times.
 - proposed_event = set whenever a specific meeting/visit time is agreed OR
-  requested — even a quick text like "book me Thursday at 9" counts. Fill title,
-  start (absolute ISO w/ offset), location, notes.
+  requested — even a quick "book me Thursday at 9" counts. Fill title, start,
+  location, notes. (start will be replaced by the resolver — meeting_when wins.)
 - followup_at = when the NEXT touch should realistically happen (usually 1–7 days
   out) unless a specific date was asked. ISO 8601 w/ offset, or null.
 

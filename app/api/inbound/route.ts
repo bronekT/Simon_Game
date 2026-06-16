@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { runPipeline } from "@/lib/pipeline";
+import { ingestTranscript, analyzeAppointment } from "@/lib/pipeline";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -10,6 +10,11 @@ export const maxDuration = 60;
 //   - JSON  { "transcript": "..." }  (or { "text": "..." })
 //   - or a raw text/plain body
 // Authenticated by the user's personal inbound token (no login needed).
+//
+// IMPORTANT: we DECOUPLE ingest from analysis. The transcript is saved and we
+// reply 200 immediately (well under a second), then run the heavy two-step AI
+// pipeline in the BACKGROUND via after(). This is what fixes the Zapier
+// FUNCTION_INVOCATION_TIMEOUT — Zapier no longer waits for the AI.
 export async function POST(request: Request) {
   const token = new URL(request.url).searchParams.get("token");
   if (!token) return NextResponse.json({ error: "missing token" }, { status: 401 });
@@ -21,6 +26,7 @@ export async function POST(request: Request) {
     .eq("inbound_token", token)
     .maybeSingle();
   if (!s?.user_id) return NextResponse.json({ error: "invalid token" }, { status: 401 });
+  const userId = s.user_id as string;
 
   // Accept JSON or raw text.
   let transcript = "";
@@ -36,13 +42,30 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "transcript too short" }, { status: 400 });
   }
 
-  const result = await runPipeline(admin, transcript, null, s.user_id as string, "plaud");
-  if (!result.ok) {
-    return NextResponse.json({ ok: false, error: result.error, appointmentId: result.appointmentId });
+  // Save first (fast) so nothing is ever lost, even if analysis later fails.
+  const appointmentId = await ingestTranscript(admin, userId, transcript, null, "plaud");
+  if (!appointmentId) {
+    return NextResponse.json({ ok: false, error: "could not save transcript" }, { status: 500 });
   }
-  return NextResponse.json({
-    ok: true,
-    dealId: result.dealId,
-    recordType: result.recordType,
+
+  // Heavy AI work runs AFTER the response is sent (up to maxDuration).
+  after(async () => {
+    try {
+      await analyzeAppointment(createAdminClient(), userId, appointmentId);
+    } catch (e) {
+      // Flag for review so it surfaces in the app and can be reprocessed.
+      try {
+        await createAdminClient()
+          .from("appointments")
+          .update({ needs_review: true })
+          .eq("id", appointmentId);
+      } catch {
+        /* best effort */
+      }
+      console.error("inbound analyze failed", e);
+    }
   });
+
+  // Tell the caller we accepted it. Zapier sees a clean success right away.
+  return NextResponse.json({ ok: true, queued: true, appointmentId }, { status: 202 });
 }
