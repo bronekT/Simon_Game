@@ -3,10 +3,18 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { pushAction } from "@/lib/google/push";
+import { fromLocalInput } from "@/lib/format";
 
 function str(form: FormData, key: string): string {
   const v = form.get(key);
   return typeof v === "string" ? v : "";
+}
+
+// A datetime-local value ("YYYY-MM-DDTHH:mm", no zone) is Toronto wall-clock →
+// convert to a correct ISO. A full ISO (already has offset/Z) is kept as-is.
+function normalizeStart(v: string): string {
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v)) return fromLocalInput(v) ?? v;
+  return v;
 }
 
 function buildPayload(form: FormData, kind: string): Record<string, unknown> {
@@ -19,7 +27,7 @@ function buildPayload(form: FormData, kind: string): Record<string, unknown> {
   if (kind === "calendar_event") {
     return {
       title: str(form, "title"),
-      start: str(form, "start"),
+      start: normalizeStart(str(form, "start")),
       location: str(form, "location"),
       notes: str(form, "notes"),
     };

@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { fromLocalInput } from "@/lib/format";
 
 // Reads a form field, returning null for empty strings (so optional columns
 // stay NULL instead of becoming "").
@@ -46,7 +47,7 @@ export async function createDeal(form: FormData) {
       quote_price: num(form, "quote_price"),
       probability: num(form, "probability"),
       next_action: str(form, "next_action"),
-      followup_at: followupRaw ? new Date(followupRaw).toISOString() : null,
+      followup_at: fromLocalInput(followupRaw),
     })
     .select("id")
     .single();

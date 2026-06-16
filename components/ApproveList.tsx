@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { titleCase } from "@/lib/format";
+import { titleCase, dateTime, toLocalInput } from "@/lib/format";
 import { approveAction, saveAction, dismissAction } from "@/app/(app)/approve/actions";
 
 export interface QueueAction {
@@ -138,7 +138,7 @@ function PayloadInputs({ action }: { action: QueueAction }) {
 
 function preview(a: QueueAction): string {
   if (a.kind === "calendar_event") {
-    return `${a.payload.title ?? "Event"} — ${a.payload.start ?? ""}`;
+    return `${a.payload.title ?? "Event"} — ${dateTime(a.payload.start)}`;
   }
   return a.payload.subject ? `${a.payload.subject} — ${a.payload.body ?? ""}` : a.payload.body ?? "";
 }
@@ -286,11 +286,3 @@ function smsLink(to: string | null, body: string | null): string {
   return num ? `sms:${num}?&body=${text}` : `sms:?&body=${text}`;
 }
 
-// Convert a stored ISO string into the value a <input type=datetime-local> wants.
-function toLocalInput(iso: string | null | undefined): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}

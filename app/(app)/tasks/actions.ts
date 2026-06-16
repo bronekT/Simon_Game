@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { pushCalendar } from "@/lib/google/push";
+import { fromLocalInput } from "@/lib/format";
 
 function str(form: FormData, key: string): string | null {
   const v = form.get(key);
@@ -14,7 +15,6 @@ function str(form: FormData, key: string): string | null {
 export async function addTask(form: FormData) {
   const description = str(form, "description");
   if (!description) return;
-  const dueRaw = str(form, "due_at");
 
   const supabase = await createClient();
   const {
@@ -26,7 +26,7 @@ export async function addTask(form: FormData) {
     user_id: user.id,
     type: str(form, "type") ?? "other",
     description,
-    due_at: dueRaw ? new Date(dueRaw).toISOString() : null,
+    due_at: fromLocalInput(str(form, "due_at")),
     deal_id: str(form, "deal_id"),
   });
   revalidatePath("/tasks");

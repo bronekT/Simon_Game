@@ -6,17 +6,9 @@ import { updateDeal } from "./actions";
 import {
   DOOR_TYPES, DOOR_LABELS, DEAL_STATUSES, LOCATION_TYPES, type Deal,
 } from "@/lib/types";
-import { titleCase } from "@/lib/format";
+import { titleCase, toLocalInput } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
-
-function toLocal(iso: string | null): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
-}
 
 export default async function EditDeal({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -82,7 +74,7 @@ export default async function EditDeal({ params }: { params: Promise<{ id: strin
           <input name="next_action" defaultValue={d.next_action ?? ""} className="w-full px-3 py-2.5" />
         </Field>
         <Field label="Follow up at">
-          <input name="followup_at" type="datetime-local" defaultValue={toLocal(d.followup_at)} className="w-full px-3 py-2.5" />
+          <input name="followup_at" type="datetime-local" defaultValue={toLocalInput(d.followup_at)} className="w-full px-3 py-2.5" />
         </Field>
 
         <Field label="Phone"><input name="phone" defaultValue={d.phone ?? ""} className="w-full px-3 py-2.5" /></Field>

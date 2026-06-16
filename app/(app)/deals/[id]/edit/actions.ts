@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { fromLocalInput } from "@/lib/format";
 
 function str(form: FormData, key: string): string | null {
   const v = form.get(key);
@@ -21,7 +22,6 @@ export async function updateDeal(form: FormData) {
   const id = String(form.get("id") ?? "");
   if (!id) return;
 
-  const followup = str(form, "followup_at");
   const supabase = await createClient();
 
   await supabase
@@ -42,7 +42,7 @@ export async function updateDeal(form: FormData) {
       competitor: str(form, "competitor"),
       main_objection: str(form, "main_objection"),
       next_action: str(form, "next_action"),
-      followup_at: followup ? new Date(followup).toISOString() : null,
+      followup_at: fromLocalInput(str(form, "followup_at")),
     })
     .eq("id", id);
 
