@@ -148,10 +148,21 @@ export const ExtractionSchema = z.object({
 export type Extraction = z.infer<typeof ExtractionSchema>;
 export type Draft = z.infer<typeof DraftSchema>;
 
-// Output of the Sonnet writer (polished follow-ups + a short coaching note).
+// One concrete coaching point: what happened, what to say instead, the technique.
+export const CoachingPointSchema = z.object({
+  situation: looseText, // what happened / what the client said
+  better: looseText, // a better thing to have said (exact words)
+  technique: looseText.default(""), // the sales technique it uses
+});
+export type CoachingPoint = z.infer<typeof CoachingPointSchema>;
+
+// Output of the Sonnet writer (polished follow-ups + detailed coaching).
 export const WriterSchema = z.object({
   drafts: z.preprocess((v) => (Array.isArray(v) ? v : []), z.array(DraftSchema)).default([]),
   coach_note: looseText.default(""),
+  coaching: z
+    .preprocess((v) => (Array.isArray(v) ? v : []), z.array(CoachingPointSchema))
+    .default([]),
 });
 export type WriterOutput = z.infer<typeof WriterSchema>;
 

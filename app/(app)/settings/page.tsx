@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/Card";
 import { SubmitButton } from "@/components/SubmitButton";
-import { saveSettings, generateWidgetToken } from "./actions";
+import { saveSettings, generateWidgetToken, generateInboundToken } from "./actions";
 import { googleConfigured } from "@/lib/google/oauth";
 import { COMPANY, CATALOG } from "@/lib/knowledge/company";
 
@@ -69,6 +69,42 @@ export default async function Settings({
           )}
           {googleStatus === "connected" && (
             <p className="mt-2 text-xs text-won">Google connected.</p>
+          )}
+        </Card>
+      </section>
+
+      {/* Plaud / automation inbound webhook */}
+      <section className="flex flex-col gap-2">
+        <h2 className="text-sm font-semibold text-muted">Plaud / auto-import</h2>
+        <Card>
+          {s?.inbound_token ? (
+            <>
+              <p className="text-xs text-muted">
+                Send new transcripts here and they&apos;re analyzed automatically.
+                In Plaud (or Zapier/Make) add an action that POSTs the transcript
+                text to this URL:
+              </p>
+              <p className="mt-2 break-all rounded-lg bg-white/5 p-2 text-xs">
+                {`${appUrl}/api/inbound?token=${s.inbound_token}`}
+              </p>
+              <p className="mt-1 text-[11px] text-muted">
+                Body: raw text, or JSON {`{ "transcript": "..." }`}. Keep it private.
+              </p>
+              <form action={generateInboundToken} className="mt-2">
+                <button className="rounded-full border border-hairline px-3 py-1.5 text-xs text-text">
+                  Regenerate link
+                </button>
+              </form>
+            </>
+          ) : (
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm text-muted">Create your auto-import link.</p>
+              <form action={generateInboundToken}>
+                <button className="rounded-full bg-accent px-4 py-1.5 text-xs font-medium text-bg">
+                  Generate link
+                </button>
+              </form>
+            </div>
           )}
         </Card>
       </section>

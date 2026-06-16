@@ -318,3 +318,11 @@ grant all privileges on all tables in schema public to anon, authenticated, serv
 grant all privileges on all sequences in schema public to anon, authenticated, service_role;
 alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
 alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
+
+-- 0007_inbound.sql
+-- ============================================================================
+-- CLOSER — inbound webhook token
+-- Lets Plaud / Zapier / Make POST a new transcript straight into the app.
+-- ============================================================================
+
+alter table settings add column if not exists inbound_token text unique;

@@ -56,3 +56,18 @@ export async function generateWidgetToken() {
   revalidatePath("/settings");
 }
 
+// Generate (or rotate) the inbound webhook token used by Plaud / Zapier.
+export async function generateInboundToken() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const token = randomBytes(24).toString("hex");
+  await supabase
+    .from("settings")
+    .upsert({ user_id: user.id, inbound_token: token }, { onConflict: "user_id" });
+  revalidatePath("/settings");
+}
+

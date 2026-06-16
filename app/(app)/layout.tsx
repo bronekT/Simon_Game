@@ -1,11 +1,10 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { BottomNav } from "@/components/BottomNav";
-import { VoiceBar } from "@/components/VoiceBar";
 import { ServiceWorker } from "@/components/ServiceWorker";
 
-// Layout for all signed-in screens. Adds the persistent voice bar + bottom nav
-// and leaves room at the bottom so content isn't hidden behind them.
+// Layout for all signed-in screens. Adds the persistent bottom nav and leaves
+// room at the bottom so content isn't hidden behind it.
 export default async function AppLayout({
   children,
 }: {
@@ -20,10 +19,9 @@ export default async function AppLayout({
   if (!user) redirect("/login");
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col px-4 pb-32 pt-[max(env(safe-area-inset-top),1rem)]">
+    <div className="mx-auto flex min-h-screen max-w-md flex-col px-4 pb-24 pt-[max(env(safe-area-inset-top),1rem)]">
       <ServiceWorker />
       {children}
-      <VoiceBar />
       <BottomNav />
     </div>
   );

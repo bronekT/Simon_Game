@@ -18,10 +18,21 @@ Return ONLY a JSON object (no prose, no code fences):
     { "type": "soft|urgency|price|competitor|financing|decision_maker|showroom_invite|last_chance|reactivation",
       "channel": "email|sms", "subject": "", "body": "" }
   ],
-  "coach_note": ""
+  "coach_note": "",
+  "coaching": [
+    { "situation": "what happened / what the client said",
+      "better": "the exact words to say instead (a real sentence they can use)",
+      "technique": "name of the sales technique" }
+  ]
 }
 
-Guidance:
+Guidance for "coaching" (3–5 points, this is the most valuable part):
+- Be specific to THIS call. For each point: name the moment, then give the exact
+  better phrasing in quotes the salesperson could say next time, and the technique
+  (e.g. "anchor high", "feel-felt-found", "assumptive close", "tie-down question",
+  "label the objection", "future pacing"). Make it practical and teachable.
+
+Guidance for drafts/coach_note:
 - Produce 1 warm email (with a subject) and 1 short SMS unless context calls for
   more. Naturally weave in 1–2 personal_hooks so it feels personal, not templated.
 - Address the strongest objection and any competitor concern.
@@ -115,11 +126,11 @@ export async function writeFollowups(
       messages: [{ role: "user", content: brief }],
     });
     const json = extractJson(responseText(message));
-    if (!json) return { drafts: [], coach_note: "" };
+    if (!json) return { drafts: [], coach_note: "", coaching: [] };
     const parsed = WriterSchema.safeParse(JSON.parse(json));
-    return parsed.success ? parsed.data : { drafts: [], coach_note: "" };
+    return parsed.success ? parsed.data : { drafts: [], coach_note: "", coaching: [] };
   } catch {
     // Writing is best-effort — if it fails we still keep the extracted analysis.
-    return { drafts: [], coach_note: "" };
+    return { drafts: [], coach_note: "", coaching: [] };
   }
 }

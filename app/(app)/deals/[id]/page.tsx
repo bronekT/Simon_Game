@@ -5,6 +5,8 @@ import { Card } from "@/components/Card";
 import { StatusBadge } from "@/components/StatusBadge";
 import { DraftCard } from "@/components/DraftCard";
 import { DoorWantLine, EngagementChips } from "@/components/DealMeta";
+import { SubmitButton } from "@/components/SubmitButton";
+import { processTranscript } from "@/app/(app)/capture/actions";
 import { money, titleCase, dateTime, shortDate } from "@/lib/format";
 import { DOOR_LABELS, type Deal } from "@/lib/types";
 
@@ -29,6 +31,7 @@ interface Appointment {
     what_went_well?: string;
     what_went_wrong?: string;
     coach_note?: string;
+    coaching?: { situation?: string; better?: string; technique?: string }[];
     objections?: string[];
     budget_signal?: string | null;
     personal_hooks?: string[];
@@ -63,10 +66,10 @@ export default async function DealDetail({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ analyzed?: string }>;
+  searchParams: Promise<{ analyzed?: string; error?: string }>;
 }) {
   const { id } = await params;
-  const { analyzed } = await searchParams;
+  const { analyzed, error } = await searchParams;
   const supabase = await createClient();
 
   const { data } = await supabase
@@ -116,7 +119,12 @@ export default async function DealDetail({
 
       {analyzed && (
         <Card className="border-won/40">
-          <p className="text-sm text-won">Transcript analyzed ✓</p>
+          <p className="text-sm text-won">Updated from your input ✓</p>
+        </Card>
+      )}
+      {error && (
+        <Card className="border-risk/40">
+          <p className="text-sm text-risk">{error}</p>
         </Card>
       )}
 
@@ -224,9 +232,36 @@ export default async function DealDetail({
               )}
               {appt.analysis?.coach_note && (
                 <p className="mt-3 whitespace-pre-line border-t border-hairline pt-3 text-sm italic text-muted">
-                  Coach: {appt.analysis.coach_note}
+                  {appt.analysis.coach_note}
                 </p>
               )}
+            </Card>
+          )}
+
+          {/* Detailed per-lead coaching: exact phrasing + technique */}
+          {(appt.analysis?.coaching?.length ?? 0) > 0 && (
+            <Card>
+              <p className="mb-3 text-sm font-semibold text-accent">
+                🎯 Coaching — how to play it next time
+              </p>
+              <div className="flex flex-col gap-3">
+                {appt.analysis!.coaching!.map((c, i) => (
+                  <div key={i} className="border-l-2 border-accent/40 pl-3">
+                    {c.situation && <p className="text-xs text-muted">{c.situation}</p>}
+                    {c.better && (
+                      <p className="mt-1 text-sm">
+                        <span className="text-won">Try: </span>
+                        <span className="italic">“{c.better}”</span>
+                      </p>
+                    )}
+                    {c.technique && (
+                      <span className="mt-1 inline-block rounded-full bg-accent/10 px-2 py-0.5 text-[11px] text-accent">
+                        {c.technique}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
             </Card>
           )}
         </section>
@@ -277,12 +312,31 @@ export default async function DealDetail({
         </dl>
       </Card>
 
-      <Link
-        href="/capture"
-        className="rounded-full border border-hairline py-3 text-center font-medium text-text active:bg-white/10"
-      >
-        Analyze a transcript
-      </Link>
+      {/* Update this deal from a new transcript, screenshot, or file */}
+      <Card>
+        <h2 className="mb-2 text-sm font-semibold text-muted">Update this client</h2>
+        <p className="mb-3 text-xs text-muted">
+          New call transcript, a screenshot of their text/email, or a file. The AI
+          re-reads it and updates the status, follow-up, and proposed actions.
+        </p>
+        <form action={processTranscript} className="flex flex-col gap-3">
+          <input type="hidden" name="deal_id" value={deal.id} />
+          <input type="hidden" name="back_to" value={`/deals/${deal.id}`} />
+          <textarea
+            name="transcript"
+            rows={3}
+            placeholder="Paste new transcript / note (optional if attaching a file)…"
+            className="w-full resize-y px-3 py-2.5 text-sm"
+          />
+          <input
+            type="file"
+            name="file"
+            accept="image/*,.txt,.md,text/plain"
+            className="w-full rounded-xl border border-hairline bg-white/[0.04] px-3 py-2 text-sm text-muted file:mr-3 file:rounded-full file:border-0 file:bg-accent file:px-3 file:py-1 file:text-bg"
+          />
+          <SubmitButton pendingLabel="Updating…">Update from this</SubmitButton>
+        </form>
+      </Card>
     </main>
   );
 }

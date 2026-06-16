@@ -101,6 +101,36 @@ export function doorWant(
   return count ? `${count}× ${noun}` : noun;
 }
 
+// Importance score so the hottest deals float to the top by default.
+// Higher = more important. Closed deals sink to the bottom.
+export function dealPriority(d: {
+  status: DealStatus;
+  quote_price: number | null;
+  probability: number | null;
+  followup_at: string | null;
+  at_risk?: boolean | null;
+}): number {
+  if (["won", "lost", "dead"].includes(d.status)) {
+    // Keep closed deals grouped at the bottom, recent-ish first handled elsewhere.
+    return -1000;
+  }
+  const value = (d.quote_price ?? 3000) / 1000; // ~k$
+  const prob = (d.probability ?? 30) / 100;
+  let score = value * prob * 10; // weighted expected value
+  if (d.at_risk) score += 40; // surface stalled deals
+  if (d.followup_at) {
+    const days = (new Date(d.followup_at).getTime() - Date.now()) / 86400_000;
+    if (days <= 2) score += 30; // due very soon
+    else if (days <= 7) score += 12;
+  }
+  // Stage nudges (later stages are closer to money).
+  const stageBoost: Record<string, number> = {
+    negotiation: 25, quoted: 18, met: 10, booked: 6, new: 0,
+  };
+  score += stageBoost[d.status] ?? 0;
+  return score;
+}
+
 // Per-client engagement signals derived from the deal record.
 export interface Engagement {
   booked: boolean;

@@ -23,7 +23,7 @@ export function BottomNav() {
             <Link
               key={href}
               href={href}
-              className={`group flex flex-1 flex-col items-center gap-1 pb-2 pt-2.5 text-[11px] transition-colors ${
+              className={`group flex flex-1 flex-col items-center gap-1 whitespace-nowrap pb-2 pt-2.5 text-[10px] leading-none transition-colors ${
                 active ? "text-accent" : "text-muted"
               }`}
             >

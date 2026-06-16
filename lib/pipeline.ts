@@ -67,11 +67,13 @@ export async function runPipeline(
   // 4 (branch by record_type).
   let drafts: Draft[] = isNote ? [] : data.drafts;
   let coachNote = "";
+  let coaching: unknown[] = [];
   if (data.record_type === "appointment") {
-    // Full analysis path: polished follow-ups + coaching (Sonnet).
+    // Full analysis path: polished follow-ups + detailed coaching (Sonnet).
     const writer = await writeFollowups(data, settings);
     if (writer.drafts.length > 0) drafts = writer.drafts;
     coachNote = writer.coach_note;
+    coaching = writer.coaching;
   }
   if (data.record_type === "booking_call" && data.confirmation_sms) {
     drafts = [
@@ -89,7 +91,7 @@ export async function runPipeline(
       location_type: data.location_type,
       occurred_at: data.proposed_event?.start ?? new Date().toISOString(),
       summary: data.summary,
-      analysis: { ...data, coach_note: coachNote },
+      analysis: { ...data, coach_note: coachNote, coaching },
       talk_ratio: Math.round(data.talk_ratio),
       sentiment: data.sentiment,
       score_rapport: Math.round(data.scores.rapport),

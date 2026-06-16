@@ -46,10 +46,23 @@ export default async function Capture({
           <span className="text-sm text-muted">Transcript</span>
           <textarea
             name="transcript"
-            rows={12}
+            rows={10}
             placeholder="Paste the full transcript here…"
             className="w-full resize-y px-3 py-2.5 text-sm leading-relaxed"
           />
+        </label>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm text-muted">…or attach a screenshot / file</span>
+          <input
+            type="file"
+            name="file"
+            accept="image/*,.txt,.md,text/plain"
+            className="w-full rounded-xl border border-hairline bg-white/[0.04] px-3 py-2.5 text-sm text-muted file:mr-3 file:rounded-full file:border-0 file:bg-accent file:px-3 file:py-1 file:text-bg"
+          />
+          <span className="text-[11px] text-muted">
+            A screenshot of a text/WhatsApp/email, or a transcript file — the AI reads it.
+          </span>
         </label>
 
         <label className="flex flex-col gap-1.5">
@@ -74,11 +87,11 @@ export default async function Capture({
           </Card>
         )}
 
-        <SubmitButton pendingLabel="Analyzing…">Analyze transcript</SubmitButton>
+        <SubmitButton pendingLabel="Analyzing…">Analyze</SubmitButton>
 
         <p className="text-center text-xs text-muted">
-          Analysis can take 10–20 seconds. Nothing is sent to email or calendar —
-          that comes in later phases.
+          Takes ~10–20 seconds. Emails &amp; calendar events are proposed in
+          <b> To approve</b> — nothing is sent until you tap ✓.
         </p>
       </form>
     </main>

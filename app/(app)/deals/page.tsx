@@ -4,7 +4,7 @@ import { Card } from "@/components/Card";
 import { StatusBadge } from "@/components/StatusBadge";
 import { DoorWantLine, EngagementChips } from "@/components/DealMeta";
 import { money } from "@/lib/format";
-import type { Deal } from "@/lib/types";
+import { dealPriority, type Deal } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +15,10 @@ export default async function DealsList() {
     .select("*")
     .order("updated_at", { ascending: false });
 
-  const deals = (data ?? []) as Deal[];
+  // Most important deals on top by default (closed ones sink to the bottom).
+  const deals = ((data ?? []) as Deal[]).sort(
+    (a, b) => dealPriority(b) - dealPriority(a),
+  );
 
   return (
     <main className="flex flex-col gap-4">
