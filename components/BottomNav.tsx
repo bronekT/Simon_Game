@@ -5,10 +5,10 @@ import { usePathname } from "next/navigation";
 
 const ITEMS = [
   { href: "/", label: "Home", icon: HomeIcon },
-  { href: "/deals", label: "Deals", icon: DealsIcon },
+  { href: "/calls", label: "Calls", icon: PhoneIcon },
   { href: "/capture", label: "Capture", icon: CaptureIcon },
   { href: "/approve", label: "Approve", icon: ApproveIcon },
-  { href: "/tasks", label: "Plan", icon: TasksIcon },
+  { href: "/deals", label: "Deals", icon: DealsIcon },
 ];
 
 export function BottomNav() {
@@ -52,6 +52,14 @@ function isActive(pathname: string, href: string): boolean {
       : false;
   }
   return pathname.startsWith(href);
+}
+
+function PhoneIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.6a2 2 0 0 1-.5 2.1L8.1 9.6a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c.8.3 1.7.6 2.6.7a2 2 0 0 1 1.7 2Z" />
+    </svg>
+  );
 }
 
 function TasksIcon() {

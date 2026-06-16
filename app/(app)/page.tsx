@@ -54,14 +54,17 @@ export default async function Dashboard() {
           <p className="text-sm text-muted">{greeting()}</p>
           <h1 className="text-2xl font-semibold">Today</h1>
         </div>
-        <div className="flex items-center gap-4">
-          <Link href="/earnings" className="text-sm text-muted">
+        <div className="flex max-w-[62%] flex-wrap items-center justify-end gap-x-3 gap-y-1 text-xs">
+          <Link href="/tasks" className="text-muted">
+            Plan
+          </Link>
+          <Link href="/earnings" className="text-muted">
             Earnings
           </Link>
-          <Link href="/coach" className="text-sm text-muted">
+          <Link href="/coach" className="text-muted">
             Coach
           </Link>
-          <Link href="/settings" className="text-sm text-muted">
+          <Link href="/settings" className="text-muted">
             Settings
           </Link>
           <form action="/auth/signout" method="post">
