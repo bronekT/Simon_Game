@@ -340,3 +340,10 @@ alter table deals add column if not exists followups_count int not null default 
 -- ============================================================================
 
 alter table deals add column if not exists commission numeric;
+
+-- 0010_payment_stage.sql
+-- ============================================================================
+-- CLOSER — commission payment stages (0 = unpaid, 1 = 1st 50%, 2 = paid in full)
+-- ============================================================================
+
+alter table deals add column if not exists payment_stage int not null default 0;

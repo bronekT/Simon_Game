@@ -126,6 +126,7 @@ export const ExtractionSchema = z.object({
   door_type: looseEnumNullable(DOOR_VALUES),
   door_count: looseNumNullable,
   quote_price: looseNumNullable, // a specific quoted/ballpark price if stated
+  outcome: looseEnumNullable(["won", "lost"] as const), // deal clearly closed?
   match_hints: looseStrArray.default([]),
   summary: looseText,
   objections: looseStrArray.default([]),

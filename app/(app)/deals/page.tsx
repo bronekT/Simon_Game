@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/Card";
-import { DealCard } from "@/components/DealCard";
+import { SwipeDeal } from "@/components/SwipeDeal";
 import { dealPriority, type Deal } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -69,11 +69,16 @@ export default async function DealsList({
           </p>
         </Card>
       ) : (
-        <div className="flex flex-col gap-3">
-          {deals.map((d) => (
-            <DealCard key={d.id} deal={d} showFollowup />
-          ))}
-        </div>
+        <>
+          <p className="-mb-1 text-center text-[11px] text-muted">
+            Swipe a card → <span className="text-won">Won</span>, ← <span className="text-risk">Lost</span>
+          </p>
+          <div className="flex flex-col gap-3">
+            {deals.map((d) => (
+              <SwipeDeal key={d.id} deal={d} />
+            ))}
+          </div>
+        </>
       )}
     </main>
   );

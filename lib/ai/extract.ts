@@ -74,13 +74,21 @@ Use null only if truly indeterminable.
 - In "summary", lead with what they want in plain words — door type(s), how many,
   material/colour/style if mentioned, and the reason — then their pain and urgency.
 
-==================== TIMING ====================
+==================== OUTCOME ====================
+- outcome = "won" if the customer clearly committed/bought/signed/paid or said
+  yes to proceed; "lost" if they clearly went with a competitor, cancelled, or
+  declined. Otherwise null. (This moves the deal to Won/Lost.)
+
+==================== TIMING (resolve relative dates!) ====================
+- Use the "Current time" given below to turn RELATIVE times into absolute ISO
+  8601: "tomorrow at 9" → next day 09:00; "next Tuesday 2pm" → that date 14:00;
+  "in an hour" → now + 1h. Always output absolute ISO, never the words.
+- proposed_event = set whenever a specific meeting/visit time is agreed OR
+  requested — even a quick text like "book me tomorrow at 9" counts. Fill title
+  (e.g. "Doors estimate"), start (absolute ISO), location, notes.
 - followup_at = when the NEXT touch should realistically happen. Keep it sensible
-  and near-term (usually within 1–7 days of now) unless the customer explicitly
-  asked to be contacted on a specific later date. Never set it months away by
-  default. Output ISO 8601, or null if unclear.
-- proposed_event.start = an actual agreed meeting/visit time only. ISO 8601.
-  Don't confuse the follow-up reminder with a booked meeting.
+  and near-term (usually within 1–7 days) unless a specific later date was asked.
+  Output ISO 8601, or null if unclear.
 
 ==================== STEP 4: FILL THE REST ====================
 - scores.* = integers 0–10 rating the salesperson on each skill (rapport,

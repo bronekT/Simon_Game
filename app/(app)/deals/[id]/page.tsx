@@ -282,6 +282,13 @@ export default async function DealDetail({
               </div>
             </Disclosure>
           )}
+
+          <Link
+            href={`/deals/${deal.id}/coaching`}
+            className="rounded-card border border-accent/40 bg-accent/10 p-3 text-center text-sm font-medium text-accent active:scale-[0.99]"
+          >
+            🎓 Open detailed coaching breakdown →
+          </Link>
         </section>
       ) : (
         <Card>

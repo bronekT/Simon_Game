@@ -3,13 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
-// Toggle whether a won deal's commission has actually been received.
-export async function toggleCommissionPaid(form: FormData) {
+// Cycle the payment stage: unpaid → 1st 50% → paid in full → unpaid.
+export async function cyclePayment(form: FormData) {
   const id = String(form.get("id") ?? "");
-  const paid = String(form.get("paid") ?? "") === "true";
   if (!id) return;
   const supabase = await createClient();
-  await supabase.from("deals").update({ commission_paid: !paid }).eq("id", id);
+  const { data } = await supabase.from("deals").select("payment_stage").eq("id", id).maybeSingle();
+  const current = (data?.payment_stage as number) ?? 0;
+  const next = (current + 1) % 3;
+  await supabase.from("deals").update({ payment_stage: next }).eq("id", id);
   revalidatePath("/earnings");
   revalidatePath("/");
 }

@@ -14,7 +14,21 @@ export function DealCard({
 }) {
   return (
     <Link href={`/deals/${deal.id}`} className="block">
-      <div className="rounded-card border border-hairline bg-white/[0.06] p-3.5 transition active:scale-[0.99] active:bg-white/[0.09]">
+      <DealCardBody deal={deal} showFollowup={showFollowup} />
+    </Link>
+  );
+}
+
+// Just the visual (no link) — used inside the swipeable card on the Deals list.
+export function DealCardBody({
+  deal,
+  showFollowup = false,
+}: {
+  deal: Deal;
+  showFollowup?: boolean;
+}) {
+  return (
+      <div className="rounded-card border border-hairline bg-white/[0.06] p-3.5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="truncate text-[15px] font-semibold">{deal.client_name}</p>
@@ -44,7 +58,6 @@ export function DealCard({
           )}
         </div>
       </div>
-    </Link>
   );
 }
 

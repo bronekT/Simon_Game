@@ -345,9 +345,13 @@ async function applyDealUpdate(
   if (data.close_probability && data.close_probability > 0) {
     update.probability = clamp(Math.round(data.close_probability), 0, 100);
   }
-  // Status only ADVANCES, never resets.
-  const ns = nextStatus(data.record_type, current?.status as DealStatus);
-  if (ns !== current?.status) update.status = ns;
+  // A clear outcome (won/lost) wins; otherwise status only ADVANCES.
+  if (data.outcome === "won") update.status = "won";
+  else if (data.outcome === "lost") update.status = "lost";
+  else {
+    const ns = nextStatus(data.record_type, current?.status as DealStatus);
+    if (ns !== current?.status) update.status = ns;
+  }
 
   if (!current?.service_type && data.service_type) {
     update.service_type = data.service_type;

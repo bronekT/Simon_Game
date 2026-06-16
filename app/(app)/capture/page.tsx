@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { processTranscript } from "./actions";
 import { Card } from "@/components/Card";
 import { SubmitButton } from "@/components/SubmitButton";
+import { dateTime } from "@/lib/format";
 import type { Deal } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +23,22 @@ export default async function Capture({
     .not("status", "in", "(won,lost,dead)")
     .order("updated_at", { ascending: false });
   const deals = (data ?? []) as Pick<Deal, "id" | "client_name" | "status">[];
+
+  // Recent captures — so you can see incoming files (e.g. from the recorder).
+  const { data: recentData } = await supabase
+    .from("appointments")
+    .select("id, source, record_type, created_at, deal_id, deals(client_name)")
+    .order("created_at", { ascending: false })
+    .limit(8);
+  const recent = (recentData ?? []).map((r) => ({
+    id: r.id as string,
+    source: (r.source as string) ?? "manual",
+    record_type: (r.record_type as string) ?? null,
+    created_at: r.created_at as string,
+    dealId: (r.deal_id as string) ?? null,
+    client:
+      (Array.isArray(r.deals) ? r.deals[0]?.client_name : (r.deals as { client_name?: string } | null)?.client_name) ?? null,
+  }));
 
   return (
     <main className="flex flex-col gap-4">
@@ -106,6 +124,29 @@ export default async function Capture({
           <b> To approve</b> — nothing is sent until you tap ✓.
         </p>
       </form>
+
+      {/* Subtle history — confirms transcripts (incl. from the recorder) arrive */}
+      {recent.length > 0 && (
+        <section className="mt-2 flex flex-col gap-1.5 opacity-80">
+          <h2 className="text-[11px] font-semibold uppercase tracking-wide text-muted">Recent captures</h2>
+          {recent.map((r) => {
+            const inner = (
+              <div className="flex items-center justify-between gap-2 rounded-lg border border-hairline bg-white/[0.03] px-3 py-2 text-xs">
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <span>{r.source === "plaud" ? "📟" : "✍️"}</span>
+                  <span className="truncate text-text">{r.client ?? (r.record_type ?? "Capture")}</span>
+                </span>
+                <span className="shrink-0 text-muted">{dateTime(r.created_at)}</span>
+              </div>
+            );
+            return r.dealId ? (
+              <Link key={r.id} href={`/deals/${r.dealId}`}>{inner}</Link>
+            ) : (
+              <div key={r.id}>{inner}</div>
+            );
+          })}
+        </section>
+      )}
     </main>
   );
 }

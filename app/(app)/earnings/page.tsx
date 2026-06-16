@@ -2,34 +2,31 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/Card";
 import { money, shortDate } from "@/lib/format";
-import { OPEN_STATUSES, dealCommission, type Deal } from "@/lib/types";
-import { toggleCommissionPaid, setCommission } from "./actions";
+import { dealCommission, type Deal } from "@/lib/types";
+import { cyclePayment, setCommission } from "./actions";
 
 export const dynamic = "force-dynamic";
+
+// Fraction of commission received at each stage.
+function received(stage: number, commission: number): number {
+  if (stage >= 2) return commission;
+  if (stage === 1) return commission * 0.5;
+  return 0;
+}
 
 export default async function Earnings() {
   const supabase = await createClient();
 
   const { data: dealsData } = await supabase
     .from("deals")
-    .select("id, client_name, status, quote_price, probability, updated_at, commission, commission_paid")
+    .select("id, client_name, status, quote_price, commission, payment_stage, updated_at")
+    .eq("status", "won")
     .order("updated_at", { ascending: false });
-  const deals = (dealsData ?? []) as (Deal & { commission_paid?: boolean })[];
+  const won = (dealsData ?? []) as (Deal & { payment_stage?: number })[];
 
-  const won = deals.filter((d) => d.status === "won");
-  const open = deals.filter((d) => OPEN_STATUSES.includes(d.status));
-
-  const realized = won.filter((d) => d.commission_paid).reduce((s, d) => s + dealCommission(d), 0);
-  const pendingWon = won.filter((d) => !d.commission_paid).reduce((s, d) => s + dealCommission(d), 0);
-  const pipelinePotential = open.reduce(
-    (s, d) => s + dealCommission(d) * ((d.probability ?? 0) / 100),
-    0,
-  );
-
-  const now = new Date();
-  const earnedThisMonth = won
-    .filter((d) => new Date(d.updated_at).getMonth() === now.getMonth() && new Date(d.updated_at).getFullYear() === now.getFullYear())
-    .reduce((s, d) => s + dealCommission(d), 0);
+  const totalCommission = won.reduce((s, d) => s + dealCommission(d), 0);
+  const realized = won.reduce((s, d) => s + received(d.payment_stage ?? 0, dealCommission(d)), 0);
+  const outstanding = totalCommission - realized;
 
   return (
     <main className="flex flex-col gap-4">
@@ -38,71 +35,68 @@ export default async function Earnings() {
         <Link href="/" className="text-sm text-accent">Done</Link>
       </header>
 
-      <div className="grid grid-cols-2 gap-3">
-        <Card><p className="text-xs text-muted">Realized (received)</p><p className="mt-1 text-xl font-semibold text-won">{money(realized)}</p></Card>
-        <Card><p className="text-xs text-muted">Won, awaiting payout</p><p className="mt-1 text-xl font-semibold text-followup">{money(pendingWon)}</p></Card>
-        <Card><p className="text-xs text-muted">This month earned</p><p className="mt-1 text-lg font-semibold">{money(earnedThisMonth)}</p></Card>
-        <Card><p className="text-xs text-muted">Pipeline potential</p><p className="mt-1 text-lg font-semibold text-accent">{money(pipelinePotential)}</p><p className="mt-0.5 text-[11px] text-muted">weighted by probability</p></Card>
+      <div className="grid grid-cols-3 gap-3">
+        <Card><p className="text-xs text-muted">Received</p><p className="mt-1 text-lg font-semibold text-won">{money(realized)}</p></Card>
+        <Card><p className="text-xs text-muted">Outstanding</p><p className="mt-1 text-lg font-semibold text-followup">{money(outstanding)}</p></Card>
+        <Card><p className="text-xs text-muted">Total won</p><p className="mt-1 text-lg font-semibold">{money(totalCommission)}</p></Card>
       </div>
 
       <p className="text-xs text-muted">
-        Commission is <b className="text-text">~9%</b> of the quote unless you set an amount. Tap a number to change it.
+        Commission is <b className="text-text">~9%</b> of the quote unless you set an amount.
+        Tap the payment button to switch: <b className="text-text">1st 50%</b> → <b className="text-text">paid in full</b>.
       </p>
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold text-muted">Won deals</h2>
         {won.length === 0 ? (
-          <Card><p className="text-sm text-muted">No won deals yet.</p></Card>
+          <Card><p className="text-sm text-muted">No won deals yet. Win a deal and it shows up here.</p></Card>
         ) : (
-          won.map((d) => <CommissionRow key={d.id} deal={d} />)
+          won.map((d) => {
+            const stage = d.payment_stage ?? 0;
+            const comm = dealCommission(d);
+            return (
+              <Card key={d.id}>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{d.client_name}</p>
+                    <p className="text-xs text-muted">
+                      {money(d.quote_price)} · commission {money(comm)} · {shortDate(d.updated_at)}
+                    </p>
+                  </div>
+                  <form action={cyclePayment} className="shrink-0">
+                    <input type="hidden" name="id" value={d.id} />
+                    <button
+                      className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+                        stage === 2
+                          ? "bg-won/20 text-won"
+                          : stage === 1
+                            ? "bg-followup/20 text-followup"
+                            : "border border-hairline text-muted"
+                      }`}
+                    >
+                      {stage === 2 ? "Paid in full ✓✓" : stage === 1 ? "1st 50% ✓" : "Mark 1st payment"}
+                    </button>
+                  </form>
+                </div>
+
+                {/* Manual commission override */}
+                <form action={setCommission} className="mt-2 flex items-center gap-1.5">
+                  <input type="hidden" name="id" value={d.id} />
+                  <span className="text-xs text-muted">Commission $</span>
+                  <input
+                    name="commission"
+                    type="number"
+                    inputMode="decimal"
+                    defaultValue={d.commission ?? ""}
+                    placeholder={`${comm} (~9%)`}
+                    className="w-24 rounded-lg px-2 py-1 text-sm"
+                  />
+                  <button className="rounded-full border border-hairline px-2.5 py-1 text-xs text-text">Set</button>
+                </form>
+              </Card>
+            );
+          })
         )}
       </section>
-
-      {open.length > 0 && (
-        <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold text-muted">Open deals (potential)</h2>
-          {open.map((d) => <CommissionRow key={d.id} deal={d} />)}
-        </section>
-      )}
     </main>
-  );
-}
-
-function CommissionRow({ deal: d }: { deal: Deal & { commission_paid?: boolean } }) {
-  const auto = d.commission == null;
-  return (
-    <Card>
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate text-sm">{d.client_name}</p>
-          <p className="text-xs text-muted">{money(d.quote_price)} · {shortDate(d.updated_at)}</p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <form action={setCommission} className="flex items-center gap-1">
-            <input type="hidden" name="id" value={d.id} />
-            <span className="text-muted">$</span>
-            <input
-              name="commission"
-              type="number"
-              inputMode="decimal"
-              defaultValue={d.commission ?? ""}
-              placeholder={String(dealCommission(d))}
-              className="w-20 rounded-lg px-2 py-1 text-right text-sm"
-            />
-            <button className="rounded-full border border-hairline px-2 py-1 text-xs text-text">Set</button>
-          </form>
-          {d.status === "won" && (
-            <form action={toggleCommissionPaid}>
-              <input type="hidden" name="id" value={d.id} />
-              <input type="hidden" name="paid" value={String(Boolean(d.commission_paid))} />
-              <button className={`rounded-full px-2.5 py-1 text-xs font-medium ${d.commission_paid ? "bg-won/15 text-won" : "border border-hairline text-muted"}`}>
-                {d.commission_paid ? "Paid ✓" : "Mark paid"}
-              </button>
-            </form>
-          )}
-        </div>
-      </div>
-      {auto && <p className="mt-1 text-[11px] text-muted">est. {money(dealCommission(d))} (~9%)</p>}
-    </Card>
   );
 }
