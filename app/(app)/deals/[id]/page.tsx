@@ -230,7 +230,7 @@ export default async function DealDetail({
                   : ""}
               </p>
               <p className="mt-2 text-xs text-muted">
-                Review &amp; add it from the <span className="text-accent">Approve</span> tab.
+                Confirm it below in <span className="text-accent">Follow-ups &amp; actions</span> to add it to your calendar.
               </p>
             </Card>
           )}
@@ -373,10 +373,13 @@ export default async function DealDetail({
         </section>
       )}
 
-      {/* Details */}
-      <Card>
-        <h2 className="mb-3 text-sm font-semibold text-muted">Details</h2>
-        <dl className="flex flex-col divide-y divide-hairline">
+      {/* Details — collapsed by default */}
+      <details className="rounded-card border border-hairline bg-white/[0.04]">
+        <summary className="flex cursor-pointer list-none items-center justify-between p-4">
+          <span className="text-xs font-semibold uppercase tracking-wide text-muted">Details</span>
+          <span className="text-muted transition-transform group-open:rotate-180">⌄</span>
+        </summary>
+        <dl className="flex flex-col divide-y divide-hairline px-4 pb-3">
           <Row label="Door type" value={deal.door_type ? DOOR_LABELS[deal.door_type] : "—"} />
           <Row label="Quantity" value={deal.door_count != null ? `${deal.door_count}` : "—"} />
           <Row label="Lead source" value={titleCase(deal.lead_source)} />
@@ -389,7 +392,7 @@ export default async function DealDetail({
           <Row label="Main objection" value={deal.main_objection ?? "—"} />
           <Row label="Created" value={dateTime(deal.created_at)} />
         </dl>
-      </Card>
+      </details>
 
       {/* Update this deal from a new transcript, screenshot, or file */}
       <Card>

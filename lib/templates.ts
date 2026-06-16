@@ -1,9 +1,20 @@
 import { COMPANY } from "./knowledge/company";
-import { dateTime } from "./format";
+import { dateTime, TZ } from "./format";
 import { doorWant, type DoorType } from "./types";
 
-// Beautiful, structured booking confirmations (with emoji) — deterministic so
-// they always look right. Used for booking_call captures.
+// Time-of-day greeting in the business timezone (changes morning/afternoon/eve).
+function greeting(): string {
+  const hour = Number(
+    new Intl.DateTimeFormat("en-US", { timeZone: TZ, hour: "2-digit", hour12: false })
+      .format(new Date()),
+  );
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
+
+// Booking confirmation in the style you send — dynamic greeting, name, and
+// day/date/time, signed off. Deterministic so it always reads cleanly.
 export function bookingConfirmation(opts: {
   name: string | null;
   startIso: string | null;
@@ -12,45 +23,40 @@ export function bookingConfirmation(opts: {
   showroomAddress: string | null;
 }): string {
   const name = opts.name ?? "there";
-  const when = opts.startIso ? dateTime(opts.startIso) : "your appointment time";
-  const sig = `— ${COMPANY.rep}\n${COMPANY.name}\n📞 ${COMPANY.phone}`;
+  const when = opts.startIso ? dateTime(opts.startIso) : "the time we agreed";
+  const sig = `${COMPANY.rep}\n${COMPANY.name}\n${COMPANY.phone}`;
 
   if (opts.locationType === "showroom") {
     const addr = opts.showroomAddress ?? "our showroom";
     return [
-      `Hi ${name} 👋`,
+      `${greeting()} ${name},`,
       ``,
-      `Thank you for booking your appointment with ${COMPANY.name}! 🚪`,
+      `Thank you for booking your showroom appointment with ${COMPANY.name}! We look forward to helping you find the perfect door.`,
       ``,
-      `To make the most of our visit:`,
-      `📸 Take a few photos of your current door`,
-      `📏 Measure brick-to-brick roughly (inside & outside)`,
-      ``,
-      `📅 ${when}`,
+      `🗓️ ${when}`,
       `📍 ${addr}`,
-      `🅿️ Parking on site`,
       ``,
-      `See you there!`,
+      `To make the most of your visit, it helps to bring a few photos of your current door and a rough brick-to-brick measurement (inside & outside).`,
+      ``,
+      `See you then! Reply here if anything changes.`,
       ``,
       sig,
     ].join("\n");
   }
 
   // Home visit (default)
-  const addr = opts.address ?? "your place";
+  const addr = opts.address ?? "your address";
   return [
-    `Hi ${name} 👋`,
+    `${greeting()} ${name},`,
     ``,
-    `Thank you for booking! I'll come by to measure and walk you through door options. 🚪`,
+    `Thank you for booking! I'll come by to measure and walk you through your door options.`,
     ``,
-    `To get started:`,
-    `📸 A few photos of your current door help`,
-    `🚪 Please make sure I can reach the doorway`,
-    ``,
-    `📅 ${when}`,
+    `🗓️ ${when}`,
     `📍 ${addr}`,
     ``,
-    `See you then!`,
+    `If you can, please make sure I'll have access to the doorway. A couple of photos of the current door ahead of time are a bonus.`,
+    ``,
+    `See you then! Reply here if anything changes.`,
     ``,
     sig,
   ].join("\n");

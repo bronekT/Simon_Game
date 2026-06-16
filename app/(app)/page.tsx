@@ -3,8 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/Card";
 import { DealCard } from "@/components/DealCard";
 import { SectionHeader } from "@/components/SectionHeader";
+import { HomeMenu } from "@/components/HomeMenu";
 import { money } from "@/lib/format";
-import { OPEN_STATUSES, type Deal } from "@/lib/types";
+import { OPEN_STATUSES, dealCommission, type Deal } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -35,8 +36,8 @@ export default async function Dashboard() {
   );
   const wonValue = wonThisMonth.reduce((s, d) => s + (d.quote_price ?? 0), 0);
   const goal = settings?.monthly_goal ?? null;
-  const commissionPct = settings?.commission_self ?? null;
-  const myCommission = commissionPct != null ? (wonValue * commissionPct) / 100 : null;
+  // Per-deal commission (your manual amount, or ~9%) — matches Earnings.
+  const myCommission = wonThisMonth.reduce((s, d) => s + dealCommission(d), 0);
   const goalPct = goal && goal > 0 ? Math.min(100, Math.round((wonValue / goal) * 100)) : null;
 
   // "Money Moves": open deals, highest probability first, then by quote value.
@@ -55,25 +56,7 @@ export default async function Dashboard() {
           <p className="text-sm text-muted">{greeting()}</p>
           <h1 className="text-2xl font-semibold">Today</h1>
         </div>
-        <div className="flex max-w-[62%] flex-wrap items-center justify-end gap-x-3 gap-y-1 text-xs">
-          <Link href="/tasks" className="text-muted">
-            Plan
-          </Link>
-          <Link href="/earnings" className="text-muted">
-            Earnings
-          </Link>
-          <Link href="/coach" className="text-muted">
-            Coach
-          </Link>
-          <Link href="/settings" className="text-muted">
-            Settings
-          </Link>
-          <form action="/auth/signout" method="post">
-            <button type="submit" className="text-sm text-muted">
-              Sign out
-            </button>
-          </form>
-        </div>
+        <HomeMenu />
       </header>
 
       {/* Commission / goal row */}
@@ -92,34 +75,26 @@ export default async function Dashboard() {
         </Card>
       </div>
 
-      {/* Commission / OTE tracker — tap for the full Earnings view */}
-      {(goal || myCommission != null) && (
-        <Link href="/earnings">
-          <Card className="active:bg-white/[0.05]">
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-muted">
-                {myCommission != null ? "Your commission this month" : "Goal progress"}
-              </p>
-              <div className="flex items-center gap-1.5">
-                {myCommission != null && (
-                  <p className="text-sm font-semibold text-accent">{money(myCommission)}</p>
-                )}
-                <span className="text-muted">›</span>
-              </div>
+      {/* Commission tracker — tap for the full Earnings view */}
+      <Link href="/earnings">
+        <Card className="active:bg-white/[0.05]">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted">Commission this month</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-semibold">{money(myCommission)}</p>
+              <span className="text-muted">›</span>
             </div>
-            {goalPct != null && (
-              <>
-                <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
-                  <div className="h-full rounded-full bg-won" style={{ width: `${goalPct}%` }} />
-                </div>
-                <p className="mt-1 text-xs text-muted">
-                  {goalPct}% of {money(goal)} goal
-                </p>
-              </>
-            )}
-          </Card>
-        </Link>
-      )}
+          </div>
+          {goalPct != null && (
+            <>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
+                <div className="h-full rounded-full bg-won" style={{ width: `${goalPct}%` }} />
+              </div>
+              <p className="mt-1 text-xs text-muted">{goalPct}% of {money(goal)} sales goal</p>
+            </>
+          )}
+        </Card>
+      </Link>
 
       {/* At-risk alerts */}
       {atRisk.length > 0 && (

@@ -27,13 +27,18 @@ export function ActionsInline({ actions }: { actions: QueueAction[] }) {
   return (
     <>
       <div className="flex flex-col gap-2">
-        {actions.map((a) => (
+        {[...actions].sort(calendarFirst).map((a) => (
           <ActionRow key={a.id} a={a} onEdit={() => setOpen(a)} />
         ))}
       </div>
       {open && <ActionModal action={open} onClose={() => setOpen(null)} />}
     </>
   );
+}
+
+// Meetings (calendar) float to the top — that's the thing to confirm first.
+function calendarFirst(a: QueueAction, b: QueueAction): number {
+  return (a.kind === "calendar_event" ? 0 : 1) - (b.kind === "calendar_event" ? 0 : 1);
 }
 
 export interface LeadGroup {
@@ -74,12 +79,12 @@ export function ApproveList({ groups }: { groups: LeadGroup[] }) {
 function ActionRow({ a, onEdit }: { a: QueueAction; onEdit: () => void }) {
   return (
     <div className="flex items-start gap-2 rounded-xl bg-white/[0.03] p-2">
-      <button onClick={onEdit} className="min-w-0 flex-1 text-left active:opacity-70">
-        <span className="rounded-full bg-task/15 px-2 py-0.5 text-xs font-medium text-task">
+      <button onClick={onEdit} className="flex min-w-0 flex-1 items-center gap-2 text-left active:opacity-70">
+        <span className="shrink-0 rounded-full bg-task/15 px-2 py-0.5 text-xs font-medium text-task">
           {KIND_LABEL[a.kind]}
         </span>
-        <p className="mt-1.5 line-clamp-2 text-sm">{preview(a)}</p>
-        <span className="mt-0.5 inline-block text-[11px] text-accent">tap to edit</span>
+        <span className="min-w-0 flex-1 truncate text-sm">{shortTitle(a)}</span>
+        <span className="shrink-0 text-[11px] text-accent">open</span>
       </button>
       <form className="flex shrink-0 flex-col gap-2">
         <PayloadInputs action={a} />
@@ -136,11 +141,11 @@ function PayloadInputs({ action }: { action: QueueAction }) {
   );
 }
 
-function preview(a: QueueAction): string {
-  if (a.kind === "calendar_event") {
-    return `${a.payload.title ?? "Event"} — ${dateTime(a.payload.start)}`;
-  }
-  return a.payload.subject ? `${a.payload.subject} — ${a.payload.body ?? ""}` : a.payload.body ?? "";
+// Compact, collapsed label (the full text only opens in the modal on tap).
+function shortTitle(a: QueueAction): string {
+  if (a.kind === "calendar_event") return `Meeting · ${dateTime(a.payload.start)}`;
+  if (a.kind === "email") return a.payload.subject || "Email follow-up";
+  return "Text message follow-up";
 }
 
 function ActionModal({

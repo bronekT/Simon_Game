@@ -3,9 +3,10 @@ import { doorWant, engagement, type DealStatus, type DoorType } from "@/lib/type
 // A small door glyph used wherever we describe what the client wants.
 export function DoorIcon({ className = "" }: { className?: string }) {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <rect x="5" y="3" width="14" height="18" rx="1" />
-      <path d="M15 12h.01" />
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16" />
+      <path d="M4 21h16" />
+      <circle cx="15" cy="12.5" r="1" fill="currentColor" stroke="none" />
     </svg>
   );
 }
