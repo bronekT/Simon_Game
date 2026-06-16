@@ -5,7 +5,8 @@ import { Card } from "@/components/Card";
 import { DoorWantLine, EngagementChips } from "@/components/DealMeta";
 import { StatusSelect } from "@/components/StatusSelect";
 import { SubmitButton } from "@/components/SubmitButton";
-import { ActionsInline, type QueueAction } from "@/components/ApproveList";
+import { type QueueAction } from "@/components/ApproveList";
+import { MeetingConfirm, FollowupActions } from "@/components/DealActions";
 import { PendingOverlay } from "@/components/PendingOverlay";
 import { processTranscript } from "@/app/(app)/capture/actions";
 import { bumpFollowups, deleteDeal, generateFollowups } from "./quick-actions";
@@ -103,6 +104,8 @@ export default async function DealDetail({
     retries: (a.retries as number) ?? 0,
     client_name: deal.client_name,
   }));
+  const meetingAction = actions.find((a) => a.kind === "calendar_event") ?? null;
+  const msgActions = actions.filter((a) => a.kind !== "calendar_event");
 
   return (
     <main className="flex flex-col gap-4">
@@ -218,21 +221,20 @@ export default async function DealDetail({
             {appt.talk_ratio != null && <TalkBar you={appt.talk_ratio} />}
           </Card>
 
-          {/* Proposed meeting (booking calls / next visits) */}
-          {appt.analysis?.proposed_event?.start && (
-            <Card className="border-task/30">
-              <p className="text-xs font-semibold text-task">Proposed meeting</p>
-              <p className="mt-1 text-sm">{appt.analysis.proposed_event.title ?? "Visit"}</p>
-              <p className="mt-0.5 text-xs text-muted">
-                {dateTime(appt.analysis.proposed_event.start)}
-                {appt.analysis.proposed_event.location
-                  ? ` · ${appt.analysis.proposed_event.location}`
-                  : ""}
-              </p>
-              <p className="mt-2 text-xs text-muted">
-                Confirm it below in <span className="text-accent">Follow-ups &amp; actions</span> to add it to your calendar.
-              </p>
-            </Card>
+          {/* Meeting — pinned at top, confirm in one tap (adds to Calendar) */}
+          {meetingAction ? (
+            <MeetingConfirm action={meetingAction} />
+          ) : (
+            appt.analysis?.proposed_event?.start && (
+              <Card className="border-won/30">
+                <p className="text-xs font-semibold uppercase tracking-wide text-won">Meeting · on calendar</p>
+                <p className="mt-1 text-sm">{appt.analysis.proposed_event.title ?? "Visit"}</p>
+                <p className="mt-0.5 text-xs text-muted">
+                  {dateTime(appt.analysis.proposed_event.start)}
+                  {appt.analysis.proposed_event.location ? ` · ${appt.analysis.proposed_event.location}` : ""}
+                </p>
+              </Card>
+            )
           )}
 
           {/* Objections + personal hooks */}
@@ -324,10 +326,10 @@ export default async function DealDetail({
         </Card>
       )}
 
-      {/* Follow-ups & actions — approve / add to calendar right here */}
+      {/* Follow-ups — email & SMS, colour-coded, expand on tap */}
       <section className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Follow-ups &amp; actions</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Follow-ups</h2>
           <form action={generateFollowups}>
             <input type="hidden" name="id" value={deal.id} />
             <button className="rounded-full border border-accent/50 px-3 py-1 text-xs font-medium text-accent active:scale-95">
@@ -335,13 +337,12 @@ export default async function DealDetail({
             </button>
           </form>
         </div>
-        {actions.length > 0 ? (
-          <ActionsInline actions={actions} />
+        {msgActions.length > 0 ? (
+          <FollowupActions actions={msgActions} />
         ) : (
           <Card>
             <p className="text-sm text-muted">
-              No pending email / SMS / calendar items. Tap <b className="text-accent">Generate</b>{" "}
-              to draft close-oriented follow-ups, or approved ones live in <b>To approve</b>.
+              No email / SMS yet. Tap <b className="text-accent">Generate</b> to draft close-oriented follow-ups.
             </p>
           </Card>
         )}
