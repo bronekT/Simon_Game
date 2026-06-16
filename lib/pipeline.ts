@@ -9,9 +9,25 @@ export type PipelineResult =
   | { ok: true; dealId: string | null; appointmentId: string; created: boolean; matchedBy: string; recordType: string }
   | { ok: false; appointmentId: string; error: string };
 
-// SPEC.md Section 6 — the reliable pipeline. Phase 1 runs steps 1–4 (ingest,
-// classify+match, validate, branch) and writes analysis + drafts. Queuing to
-// actions_queue and Google push come in Phases 2–3.
+// Step 1 (Ingest) — store the raw transcript immediately and return the row id.
+// Split out so the heavy AI work can run in the background (see analyzeAppointment).
+export async function ingestTranscript(
+  supabase: SupabaseClient,
+  userId: string,
+  transcript: string,
+  attachDealId: string | null,
+  source: "manual" | "plaud" = "manual",
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("appointments")
+    .insert({ user_id: userId, transcript, source, deal_id: attachDealId })
+    .select("id")
+    .single();
+  if (error || !data) return null;
+  return data.id as string;
+}
+
+// SPEC.md Section 6 — the reliable pipeline (ingest + analyze in one go).
 export async function runPipeline(
   supabase: SupabaseClient,
   transcript: string,
@@ -19,16 +35,27 @@ export async function runPipeline(
   userId: string,
   source: "manual" | "plaud" = "manual",
 ): Promise<PipelineResult> {
-  // 1. Ingest — store the raw transcript on an appointments row first.
-  const { data: appt, error: apptErr } = await supabase
-    .from("appointments")
-    .insert({ user_id: userId, transcript, source, deal_id: attachDealId })
-    .select("id")
-    .single();
-  if (apptErr || !appt) {
-    return { ok: false, appointmentId: "", error: apptErr?.message ?? "Could not save transcript." };
+  const appointmentId = await ingestTranscript(supabase, userId, transcript, attachDealId, source);
+  if (!appointmentId) {
+    return { ok: false, appointmentId: "", error: "Could not save transcript." };
   }
-  const appointmentId = appt.id as string;
+  return analyzeAppointment(supabase, userId, appointmentId);
+}
+
+// Steps 2–5 — classify, validate, match, branch, persist. Operates on an
+// existing appointment row (so it can run after the request, in the background).
+export async function analyzeAppointment(
+  supabase: SupabaseClient,
+  userId: string,
+  appointmentId: string,
+): Promise<PipelineResult> {
+  const { data: row } = await supabase
+    .from("appointments")
+    .select("transcript, deal_id")
+    .eq("id", appointmentId)
+    .single();
+  const transcript = (row?.transcript as string) ?? "";
+  const attachDealId = (row?.deal_id as string | null) ?? null;
 
   // Settings give the AI company name / showroom / signature for confirmations.
   const { data: settingsRow } = await supabase
@@ -270,7 +297,7 @@ async function applyDealUpdate(
 ) {
   const { data: current } = await supabase
     .from("deals")
-    .select("status, service_type, door_type, door_count")
+    .select("status, service_type, door_type, door_count, quote_price, client_name, address")
     .eq("id", dealId)
     .single();
 
@@ -286,11 +313,18 @@ async function applyDealUpdate(
   if (!current?.service_type && data.service_type) {
     update.service_type = data.service_type;
   }
-  // Fill door details from the analysis when we don't already have them.
+  // Fill door details / price from the analysis when we don't already have them.
   if (!current?.door_type && data.door_type) update.door_type = data.door_type;
   if (current?.door_count == null && data.door_count != null) {
     update.door_count = Math.round(data.door_count);
   }
+  if (current?.quote_price == null && data.quote_price != null) {
+    update.quote_price = data.quote_price;
+  }
+  // Backfill a real client name / address if we didn't have one yet.
+  const placeholder = !current?.client_name || current.client_name === "New lead";
+  if (placeholder && data.client.name) update.client_name = data.client.name;
+  if (!current?.address && data.client.address) update.address = data.client.address;
 
   await supabase.from("deals").update(update).eq("id", dealId);
 }

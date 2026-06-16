@@ -55,14 +55,29 @@ Where the meeting happens (for booking_call: where the FUTURE visit will be):
 - "virtual" → a video/online meeting (Zoom, FaceTime, Google Meet).
 Use null only if truly indeterminable.
 
-==================== STEP 3: WHAT DOORS ====================
+==================== STEP 3: WHO + WHAT DOORS ====================
+- client.name = the CUSTOMER's name (NOT the salesperson). The salesperson is
+  the one selling/asking; the customer is the homeowner/buyer. If the customer's
+  name is never stated, use null — do NOT put the salesperson's name here, and do
+  NOT invent a name.
+- client.address = the customer's address ONLY if clearly stated; else null. Do
+  not guess or assemble a partial address.
 - door_type = the MAIN door type the client is after, one of: entry, patio,
   storm, french, sliding, garage, interior, bifold, screen, other. null if unclear.
 - door_count = how many doors they want (integer), or null if not stated.
+- quote_price = a specific price quoted or a ballpark number given (just the
+  number, CAD), or null if no price was mentioned. "around eight thousand" → 8000.
 - service_type = "doors" (this business only does doors) unless clearly otherwise.
 - In "summary", lead with what they want in plain words — door type(s), how many,
-  material/colour/style if mentioned, and the reason (e.g. "drafty old front
-  door", "new patio build") — then their pain and urgency.
+  material/colour/style if mentioned, and the reason — then their pain and urgency.
+
+==================== TIMING ====================
+- followup_at = when the NEXT touch should realistically happen. Keep it sensible
+  and near-term (usually within 1–7 days of now) unless the customer explicitly
+  asked to be contacted on a specific later date. Never set it months away by
+  default. Output ISO 8601, or null if unclear.
+- proposed_event.start = an actual agreed meeting/visit time only. ISO 8601.
+  Don't confuse the follow-up reminder with a booked meeting.
 
 ==================== STEP 4: FILL THE REST ====================
 - scores.* = integers 0–10 rating the salesperson on each skill (rapport,

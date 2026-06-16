@@ -5,13 +5,14 @@ import { SubmitButton } from "@/components/SubmitButton";
 import type { Deal } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60; // allow background analysis to finish
 
 export default async function Capture({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; logged?: string }>;
+  searchParams: Promise<{ error?: string; logged?: string; processing?: string }>;
 }) {
-  const { error, logged } = await searchParams;
+  const { error, logged, processing } = await searchParams;
 
   const supabase = await createClient();
   const { data } = await supabase
@@ -30,6 +31,16 @@ export default async function Capture({
           handles each correctly.
         </p>
       </header>
+
+      {processing && (
+        <Card className="border-task/40">
+          <p className="text-sm text-task">Analyzing in the background…</p>
+          <p className="mt-1 text-xs text-muted">
+            You can keep working. The deal &amp; proposed actions appear in{" "}
+            <b>Deals</b> and <b>To approve</b> in ~15–20s — just refresh.
+          </p>
+        </Card>
+      )}
 
       {logged === "note" && (
         <Card className="border-won/40">
@@ -68,7 +79,7 @@ export default async function Capture({
         <label className="flex flex-col gap-1.5">
           <span className="text-sm text-muted">Attach to</span>
           <select name="deal_id" defaultValue="" className="w-full px-3 py-2.5">
-            <option value="">Auto-detect (match by phone, or create new)</option>
+            <option value="">✨ New deal from this transcript (auto-detect)</option>
             {deals.map((d) => (
               <option key={d.id} value={d.id}>
                 {d.client_name} · {d.status}

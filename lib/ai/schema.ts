@@ -125,6 +125,7 @@ export const ExtractionSchema = z.object({
   service_type: looseEnumNullable(SERVICE_VALUES),
   door_type: looseEnumNullable(DOOR_VALUES),
   door_count: looseNumNullable,
+  quote_price: looseNumNullable, // a specific quoted/ballpark price if stated
   match_hints: looseStrArray.default([]),
   summary: looseText,
   objections: looseStrArray.default([]),

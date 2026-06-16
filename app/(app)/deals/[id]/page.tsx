@@ -11,6 +11,7 @@ import { money, titleCase, dateTime, shortDate } from "@/lib/format";
 import { DOOR_LABELS, type Deal } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60; // allow background "update this client" to finish
 
 interface Appointment {
   id: string;
@@ -66,10 +67,10 @@ export default async function DealDetail({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ analyzed?: string; error?: string }>;
+  searchParams: Promise<{ analyzed?: string; error?: string; processing?: string }>;
 }) {
   const { id } = await params;
-  const { analyzed, error } = await searchParams;
+  const { analyzed, error, processing } = await searchParams;
   const supabase = await createClient();
 
   const { data } = await supabase
@@ -99,9 +100,14 @@ export default async function DealDetail({
   return (
     <main className="flex flex-col gap-5">
       <header className="pt-2">
-        <Link href="/deals" className="text-sm text-accent">
-          ← Deals
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link href="/deals" className="text-sm text-accent">
+            ← Deals
+          </Link>
+          <Link href={`/deals/${deal.id}/edit`} className="text-sm text-accent">
+            Edit
+          </Link>
+        </div>
         <div className="mt-2 flex items-start justify-between gap-3">
           <h1 className="text-2xl font-semibold">{deal.client_name}</h1>
           <StatusBadge status={deal.status} />
@@ -117,6 +123,11 @@ export default async function DealDetail({
         <EngagementChips deal={deal} className="mt-3" />
       </header>
 
+      {processing && (
+        <Card className="border-task/40">
+          <p className="text-sm text-task">Analyzing in the background… refresh in ~15s.</p>
+        </Card>
+      )}
       {analyzed && (
         <Card className="border-won/40">
           <p className="text-sm text-won">Updated from your input ✓</p>
@@ -161,9 +172,9 @@ export default async function DealDetail({
             {appt.summary && <p className="text-sm">{appt.summary}</p>}
             <div className="mt-3 flex flex-wrap gap-2 text-xs">
               {appt.sentiment && <Pill>Sentiment: {appt.sentiment}</Pill>}
-              {appt.talk_ratio != null && <Pill>You spoke {appt.talk_ratio}%</Pill>}
               {appt.analysis?.budget_signal && <Pill>Budget: {appt.analysis.budget_signal}</Pill>}
             </div>
+            {appt.talk_ratio != null && <TalkBar you={appt.talk_ratio} />}
           </Card>
 
           {/* Proposed meeting (booking calls / next visits) */}
@@ -212,30 +223,20 @@ export default async function DealDetail({
 
           <ScoreGrid appt={appt} />
 
-          {(appt.analysis?.what_went_well || appt.analysis?.what_went_wrong) && (
-            <Card>
-              {appt.analysis?.what_went_well && (
-                <div className="mb-3">
-                  <p className="text-xs font-semibold text-won">What went well</p>
-                  <p className="mt-1 text-sm text-muted">
-                    {appt.analysis.what_went_well}
-                  </p>
-                </div>
-              )}
-              {appt.analysis?.what_went_wrong && (
-                <div>
-                  <p className="text-xs font-semibold text-risk">To improve</p>
-                  <p className="mt-1 text-sm text-muted">
-                    {appt.analysis.what_went_wrong}
-                  </p>
-                </div>
-              )}
-              {appt.analysis?.coach_note && (
-                <p className="mt-3 whitespace-pre-line border-t border-hairline pt-3 text-sm italic text-muted">
-                  {appt.analysis.coach_note}
-                </p>
-              )}
-            </Card>
+          {appt.analysis?.what_went_well && (
+            <Disclosure title="What went well" tone="won">
+              {appt.analysis.what_went_well}
+            </Disclosure>
+          )}
+          {appt.analysis?.what_went_wrong && (
+            <Disclosure title="To improve" tone="risk">
+              {appt.analysis.what_went_wrong}
+            </Disclosure>
+          )}
+          {appt.analysis?.coach_note && (
+            <Disclosure title="Coach summary" tone="accent">
+              <span className="whitespace-pre-line">{appt.analysis.coach_note}</span>
+            </Disclosure>
           )}
 
           {/* Detailed per-lead coaching: exact phrasing + technique */}
@@ -353,9 +354,16 @@ function ScoreGrid({ appt }: { appt: Appointment }) {
   ];
   if (scores.every((s) => s.value == null)) return null;
 
+  const title =
+    appt.record_type === "appointment"
+      ? "Appointment scores (/10)"
+      : appt.record_type === "followup_call"
+        ? "Follow-up call scores (/10)"
+        : "Call scores (/10)";
+
   return (
     <Card>
-      <p className="mb-3 text-xs font-semibold text-muted">Call scores (/10)</p>
+      <p className="mb-3 text-xs font-semibold text-muted">{title}</p>
       <div className="flex flex-col gap-2.5">
         {scores.map((s) => (
           <div key={s.label} className="flex items-center gap-3">
@@ -373,6 +381,46 @@ function ScoreGrid({ appt }: { appt: Appointment }) {
         ))}
       </div>
     </Card>
+  );
+}
+
+// Collapsible card — tap the title to expand.
+function Disclosure({
+  title,
+  tone,
+  children,
+}: {
+  title: string;
+  tone: "won" | "risk" | "accent";
+  children: React.ReactNode;
+}) {
+  const toneClass = tone === "won" ? "text-won" : tone === "risk" ? "text-risk" : "text-accent";
+  return (
+    <details className="group rounded-card border border-hairline bg-white/[0.02]">
+      <summary className="flex cursor-pointer list-none items-center justify-between p-4">
+        <span className={`text-sm font-semibold ${toneClass}`}>{title}</span>
+        <span className="text-muted transition-transform group-open:rotate-180">⌄</span>
+      </summary>
+      <div className="px-4 pb-4 text-sm text-muted">{children}</div>
+    </details>
+  );
+}
+
+// Two-colour bar showing who spoke more (you vs the client).
+function TalkBar({ you }: { you: number }) {
+  const me = Math.max(0, Math.min(100, you));
+  const client = 100 - me;
+  return (
+    <div className="mt-3">
+      <div className="mb-1 flex justify-between text-[11px]">
+        <span className="text-accent">You {me}%</span>
+        <span className="text-task">Client {client}%</span>
+      </div>
+      <div className="flex h-2.5 overflow-hidden rounded-full bg-white/10">
+        <div className="h-full bg-accent" style={{ width: `${me}%` }} />
+        <div className="h-full bg-task" style={{ width: `${client}%` }} />
+      </div>
+    </div>
   );
 }
 
