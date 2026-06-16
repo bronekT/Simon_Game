@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Card } from "./Card";
 import { titleCase } from "@/lib/format";
 import { approveAction, saveAction, dismissAction } from "@/app/(app)/approve/actions";
 
@@ -20,66 +19,83 @@ const KIND_LABEL: Record<QueueAction["kind"], string> = {
   calendar_event: "Calendar event",
 };
 
-export function ApproveList({ actions }: { actions: QueueAction[] }) {
+export interface LeadGroup {
+  dealId: string;
+  clientName: string;
+  actions: QueueAction[];
+}
+
+// Grouped by lead, newest first; tap a lead to reveal its proposed actions.
+export function ApproveList({ groups }: { groups: LeadGroup[] }) {
   const [open, setOpen] = useState<QueueAction | null>(null);
 
   return (
     <>
       <div className="flex flex-col gap-3">
-        {actions.map((a) => (
-          <Card key={a.id} className="!p-3">
-            <div className="flex items-start gap-2">
-              {/* Tap the content to edit in a popup */}
-              <button onClick={() => setOpen(a)} className="min-w-0 flex-1 text-left active:opacity-70">
-                <div className="flex items-center gap-2">
-                  <span className="rounded-full bg-task/15 px-2 py-0.5 text-xs font-medium text-task">
-                    {KIND_LABEL[a.kind]}
-                  </span>
-                  <span className="truncate text-xs text-muted">{a.client_name}</span>
-                </div>
-                <p className="mt-1.5 line-clamp-2 text-sm">{preview(a)}</p>
-                <span className="mt-1 inline-block text-[11px] text-accent">tap to edit</span>
-              </button>
-
-              {/* Quick actions */}
-              <form className="flex shrink-0 flex-col gap-2">
-                <PayloadInputs action={a} />
-                {a.kind === "sms" ? (
-                  <a
-                    href={smsLink(a.payload.to, a.payload.body)}
-                    aria-label="Open Messages"
-                    className="flex h-9 w-9 items-center justify-center rounded-full bg-task/20 text-base text-task active:scale-90"
-                  >
-                    📱
-                  </a>
-                ) : (
-                  <button
-                    type="submit"
-                    formAction={approveAction}
-                    aria-label="Approve"
-                    className="flex h-9 w-9 items-center justify-center rounded-full bg-won/20 text-lg text-won active:scale-90"
-                  >
-                    ✓
-                  </button>
-                )}
-                <button
-                  type="submit"
-                  formAction={a.kind === "sms" ? approveAction : dismissAction}
-                  aria-label={a.kind === "sms" ? "Mark done" : "Dismiss"}
-                  className={`flex h-9 w-9 items-center justify-center rounded-full text-lg active:scale-90 ${
-                    a.kind === "sms" ? "bg-won/20 text-won" : "bg-risk/15 text-risk"
-                  }`}
-                >
-                  {a.kind === "sms" ? "✓" : "✕"}
-                </button>
-              </form>
+        {groups.map((g) => (
+          <details key={g.dealId} className="rounded-card border border-hairline bg-white/[0.05]">
+            <summary className="flex cursor-pointer list-none items-center justify-between p-3">
+              <span className="truncate font-medium">{g.clientName}</span>
+              <span className="ml-2 shrink-0 rounded-full bg-accent/15 px-2 py-0.5 text-xs font-medium text-accent">
+                {g.actions.length} to review
+              </span>
+            </summary>
+            <div className="flex flex-col gap-2 border-t border-hairline p-2">
+              {g.actions.map((a) => (
+                <ActionRow key={a.id} a={a} onEdit={() => setOpen(a)} />
+              ))}
             </div>
-          </Card>
+          </details>
         ))}
       </div>
 
       {open && <ActionModal action={open} onClose={() => setOpen(null)} />}
     </>
+  );
+}
+
+function ActionRow({ a, onEdit }: { a: QueueAction; onEdit: () => void }) {
+  return (
+    <div className="flex items-start gap-2 rounded-xl bg-white/[0.03] p-2">
+      <button onClick={onEdit} className="min-w-0 flex-1 text-left active:opacity-70">
+        <span className="rounded-full bg-task/15 px-2 py-0.5 text-xs font-medium text-task">
+          {KIND_LABEL[a.kind]}
+        </span>
+        <p className="mt-1.5 line-clamp-2 text-sm">{preview(a)}</p>
+        <span className="mt-0.5 inline-block text-[11px] text-accent">tap to edit</span>
+      </button>
+      <form className="flex shrink-0 flex-col gap-2">
+        <PayloadInputs action={a} />
+        {a.kind === "sms" ? (
+          <a
+            href={smsLink(a.payload.to, a.payload.body)}
+            aria-label="Open Messages"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-task/20 text-base text-task active:scale-90"
+          >
+            📱
+          </a>
+        ) : (
+          <button
+            type="submit"
+            formAction={approveAction}
+            aria-label="Approve"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-won/20 text-lg text-won active:scale-90"
+          >
+            ✓
+          </button>
+        )}
+        <button
+          type="submit"
+          formAction={a.kind === "sms" ? approveAction : dismissAction}
+          aria-label={a.kind === "sms" ? "Mark done" : "Dismiss"}
+          className={`flex h-9 w-9 items-center justify-center rounded-full text-lg active:scale-90 ${
+            a.kind === "sms" ? "bg-won/20 text-won" : "bg-risk/15 text-risk"
+          }`}
+        >
+          {a.kind === "sms" ? "✓" : "✕"}
+        </button>
+      </form>
+    </div>
   );
 }
 

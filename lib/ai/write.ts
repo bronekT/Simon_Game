@@ -33,9 +33,15 @@ Guidance for "coaching" (3–5 points, this is the most valuable part):
   "label the objection", "future pacing"). Make it practical and teachable.
 
 Guidance for drafts/coach_note:
-- Produce 1 warm email (with a subject) and 1 short SMS unless context calls for
-  more. Naturally weave in 1–2 personal_hooks so it feels personal, not templated.
-- Address the strongest objection and any competitor concern.
+- GOAL: CLOSE the customer. Every follow-up should move them to a yes — create
+  gentle urgency, offer a small incentive (e.g. "I can hold a 5% spring discount
+  if we lock it in this week" / "free upgraded glass if you decide by Friday"),
+  OR add value (warranty, lead time, financing) — whichever best fits this deal.
+  Always end with a clear, low-friction call to action (book the install, reply
+  yes, pick a time). Be warm, not pushy.
+- Produce 1 email (with a subject) and 1 short SMS unless context calls for more.
+  Naturally weave in 1–2 personal_hooks so it feels personal, not templated.
+- Address the strongest objection and any competitor concern head-on.
 - SMS: no subject (use ""), under ~320 characters, friendly and direct.
 - Sign emails with the provided email signature when available.
 - coach_note: concrete, kind, SPECIFIC coaching for next time. Write 2–3 short

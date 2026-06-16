@@ -333,3 +333,10 @@ alter table settings add column if not exists inbound_token text unique;
 -- ============================================================================
 
 alter table deals add column if not exists followups_count int not null default 0;
+
+-- 0009_commission_per_deal.sql
+-- ============================================================================
+-- CLOSER — manual commission per deal (falls back to ~9% of quote when empty)
+-- ============================================================================
+
+alter table deals add column if not exists commission numeric;

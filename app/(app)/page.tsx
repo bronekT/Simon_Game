@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/Card";
-import { StatusBadge } from "@/components/StatusBadge";
-import { DoorWantLine, EngagementChips } from "@/components/DealMeta";
-import { money, shortDate } from "@/lib/format";
+import { DealCard } from "@/components/DealCard";
+import { money } from "@/lib/format";
 import { OPEN_STATUSES, type Deal } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -123,14 +122,7 @@ export default async function Dashboard() {
         <section className="flex flex-col gap-2">
           <h2 className="text-sm font-semibold text-risk">At risk ({atRisk.length})</h2>
           {atRisk.slice(0, 3).map((d) => (
-            <Link key={d.id} href={`/deals/${d.id}`}>
-              <Card className="border-risk/30 active:bg-white/[0.05]">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="truncate text-sm">{d.client_name}</span>
-                  <span className="text-xs text-risk">No activity 3+ days</span>
-                </div>
-              </Card>
-            </Link>
+            <DealCard key={d.id} deal={d} showFollowup />
           ))}
         </section>
       )}
@@ -155,37 +147,7 @@ export default async function Dashboard() {
             </p>
           </Card>
         ) : (
-          moneyMoves.map((d) => (
-            <Link key={d.id} href={`/deals/${d.id}`}>
-              <Card className="active:bg-white/[0.05]">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">{d.client_name}</p>
-                    {(d.door_type || d.door_count) && (
-                      <p className="mt-0.5 truncate text-sm">
-                        <DoorWantLine type={d.door_type} count={d.door_count} />
-                      </p>
-                    )}
-                    <p className="mt-0.5 truncate text-sm text-muted">
-                      {d.next_action ?? "No next action set"}
-                    </p>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <StatusBadge status={d.status} />
-                    <p className="mt-1 text-sm font-medium">
-                      {money(d.quote_price)}
-                    </p>
-                  </div>
-                </div>
-                <EngagementChips deal={d} className="mt-3" />
-                {d.followup_at && (
-                  <p className="mt-2 text-xs text-followup">
-                    Follow up {shortDate(d.followup_at)}
-                  </p>
-                )}
-              </Card>
-            </Link>
-          ))
+          moneyMoves.map((d) => <DealCard key={d.id} deal={d} showFollowup />)
         )}
       </section>
     </main>

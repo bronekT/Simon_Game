@@ -46,6 +46,17 @@ export interface Deal {
   followup_at: string | null;
   followup_sent_at: string | null;
   followups_count: number | null;
+  commission: number | null;
+}
+
+// Estimated commission to the salesperson for a deal: a manual override if set,
+// otherwise ~9% of the quote (SPEC: default ~9%).
+export function dealCommission(d: {
+  commission: number | null;
+  quote_price: number | null;
+}): number {
+  if (d.commission != null) return d.commission;
+  return Math.round((d.quote_price ?? 0) * 0.09);
 }
 
 // Fields the user can set when creating/editing a deal by hand.

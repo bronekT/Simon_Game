@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/Card";
-import { ApproveList, type QueueAction } from "@/components/ApproveList";
+import { ApproveList, type QueueAction, type LeadGroup } from "@/components/ApproveList";
 import { syncAction } from "./actions";
 import { googleConfigured } from "@/lib/google/oauth";
 import { titleCase } from "@/lib/format";
@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 
 interface Row {
   id: string;
+  deal_id: string;
   kind: QueueAction["kind"];
   payload: Record<string, string | null>;
   status: string;
@@ -22,12 +23,13 @@ export default async function Approve() {
 
   const { data } = await supabase
     .from("actions_queue")
-    .select("id, kind, payload, status, retries, deals(client_name)")
+    .select("id, deal_id, kind, payload, status, retries, deals(client_name)")
     .in("status", ["proposed", "approved", "failed", "synced"])
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: false }); // newest first
 
   const rows: Row[] = (data ?? []).map((a) => ({
     id: a.id as string,
+    deal_id: (a.deal_id as string) ?? "none",
     kind: a.kind as QueueAction["kind"],
     payload: (a.payload ?? {}) as Record<string, string | null>,
     status: a.status as string,
@@ -40,6 +42,26 @@ export default async function Approve() {
 
   const proposed = rows.filter((r) => r.status === "proposed");
   const processed = rows.filter((r) => r.status !== "proposed");
+
+  // Group proposed actions by lead, keeping newest-first order.
+  const groups: LeadGroup[] = [];
+  const index = new Map<string, LeadGroup>();
+  for (const r of proposed) {
+    let g = index.get(r.deal_id);
+    if (!g) {
+      g = { dealId: r.deal_id, clientName: r.client_name, actions: [] };
+      index.set(r.deal_id, g);
+      groups.push(g);
+    }
+    g.actions.push({
+      id: r.id,
+      kind: r.kind,
+      payload: r.payload,
+      status: r.status,
+      retries: r.retries,
+      client_name: r.client_name,
+    });
+  }
 
   const { data: g } = await supabase.from("google_accounts").select("email").maybeSingle();
   const googleConnected = Boolean(g);
@@ -72,8 +94,8 @@ export default async function Approve() {
       )}
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold text-muted">Needs your decision</h2>
-        {proposed.length === 0 ? (
+        <h2 className="text-sm font-semibold text-muted">By lead — newest first</h2>
+        {groups.length === 0 ? (
           <Card>
             <p className="text-sm text-muted">
               Nothing waiting. Analyze a transcript in <b>Capture</b> and proposed
@@ -81,7 +103,7 @@ export default async function Approve() {
             </p>
           </Card>
         ) : (
-          <ApproveList actions={proposed as QueueAction[]} />
+          <ApproveList groups={groups} />
         )}
       </section>
 

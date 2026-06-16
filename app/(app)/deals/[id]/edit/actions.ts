@@ -36,6 +36,7 @@ export async function updateDeal(form: FormData) {
       status: str(form, "status") ?? "new",
       location_type: str(form, "location_type"),
       quote_price: num(form, "quote_price"),
+      commission: num(form, "commission"),
       probability: num(form, "probability"),
       decision_maker: str(form, "decision_maker"),
       competitor: str(form, "competitor"),

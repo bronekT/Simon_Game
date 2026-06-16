@@ -74,6 +74,10 @@ export default async function EditDeal({ params }: { params: Promise<{ id: strin
           </Field>
         </div>
 
+        <Field label="Commission (CAD — blank = ~9%)">
+          <input name="commission" type="number" min="0" defaultValue={d.commission ?? ""} placeholder="auto ~9%" className="w-full px-3 py-2.5" />
+        </Field>
+
         <Field label="Next action">
           <input name="next_action" defaultValue={d.next_action ?? ""} className="w-full px-3 py-2.5" />
         </Field>

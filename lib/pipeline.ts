@@ -166,6 +166,7 @@ export async function analyzeAppointment(
     appointmentId,
     drafts,
     proposedEvent: data.proposed_event,
+    recordType: data.record_type,
   });
 
   return { ok: true, dealId, appointmentId, created, matchedBy, recordType: data.record_type };
@@ -179,9 +180,10 @@ async function enqueueActions(
     appointmentId: string;
     drafts: Draft[];
     proposedEvent: Extraction["proposed_event"];
+    recordType: string;
   },
 ) {
-  const { userId, dealId, appointmentId, drafts, proposedEvent } = args;
+  const { userId, dealId, appointmentId, drafts, proposedEvent, recordType } = args;
 
   const { data: contact } = await supabase
     .from("deals")
@@ -231,6 +233,31 @@ async function enqueueActions(
       },
       status: "proposed",
       idempotency_key: `${appointmentId}-event`,
+    });
+  }
+
+  // Two mandatory follow-ups after an appointment, auto-scheduled to Calendar.
+  if (recordType === "appointment") {
+    const plan = [
+      { days: 2, label: "1st follow-up" },
+      { days: 5, label: "2nd follow-up" },
+    ];
+    plan.forEach((f, i) => {
+      const start = new Date(Date.now() + f.days * 86400_000);
+      start.setHours(10, 0, 0, 0);
+      rows.push({
+        user_id: userId,
+        deal_id: dealId,
+        kind: "calendar_event",
+        payload: {
+          title: `Follow-up: ${clientName} (${f.label})`,
+          start: start.toISOString(),
+          location: "",
+          notes: "Auto follow-up after the appointment — call/text to close the deal.",
+        },
+        status: "proposed",
+        idempotency_key: `${appointmentId}-fu-${i}`,
+      });
     });
   }
 
@@ -301,7 +328,7 @@ async function applyDealUpdate(
 ) {
   const { data: current } = await supabase
     .from("deals")
-    .select("status, service_type, door_type, door_count, quote_price, client_name, address")
+    .select("status, service_type, door_type, door_count, quote_price, client_name, address, phone, email, location_type")
     .eq("id", dealId)
     .single();
 
@@ -333,10 +360,13 @@ async function applyDealUpdate(
   if (current?.quote_price == null && data.quote_price != null) {
     update.quote_price = data.quote_price;
   }
-  // Backfill a real client name / address if we didn't have one yet.
+  // Backfill contact details from the transcript when missing (fills Details).
   const placeholder = !current?.client_name || current.client_name === "New lead";
   if (placeholder && data.client.name) update.client_name = data.client.name;
   if (!current?.address && data.client.address) update.address = data.client.address;
+  if (!current?.phone && data.client.phone) update.phone = data.client.phone;
+  if (!current?.email && data.client.email) update.email = data.client.email;
+  if (!current?.location_type && data.location_type) update.location_type = data.location_type;
 
   await supabase.from("deals").update(update).eq("id", dealId);
 }
