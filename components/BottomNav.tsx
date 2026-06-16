@@ -6,9 +6,9 @@ import { usePathname } from "next/navigation";
 const ITEMS = [
   { href: "/", label: "Home", icon: HomeIcon },
   { href: "/calls", label: "Calls", icon: PhoneIcon },
-  { href: "/capture", label: "Capture", icon: CaptureIcon },
-  { href: "/approve", label: "Approve", icon: ApproveIcon },
   { href: "/deals", label: "Deals", icon: DealsIcon },
+  { href: "/approve", label: "Approve", icon: ApproveIcon },
+  { href: "/capture", label: "Capture", icon: CaptureIcon },
 ];
 
 export function BottomNav() {

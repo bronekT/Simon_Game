@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/Card";
 import { DealCard } from "@/components/DealCard";
+import { SectionHeader } from "@/components/SectionHeader";
 import { money } from "@/lib/format";
 import { OPEN_STATUSES, type Deal } from "@/lib/types";
 
@@ -122,8 +123,10 @@ export default async function Dashboard() {
 
       {/* At-risk alerts */}
       {atRisk.length > 0 && (
-        <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold text-risk">At risk ({atRisk.length})</h2>
+        <section className="flex flex-col gap-2.5">
+          <h2 className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-risk">
+            <span className="h-1.5 w-1.5 rounded-full bg-risk" /> At risk {atRisk.length}
+          </h2>
           {atRisk.slice(0, 3).map((d) => (
             <DealCard key={d.id} deal={d} showFollowup />
           ))}
@@ -131,13 +134,11 @@ export default async function Dashboard() {
       )}
 
       {/* Money Moves */}
-      <section className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Money Moves</h2>
-          <Link href="/deals" className="text-sm text-accent">
-            All deals
-          </Link>
-        </div>
+      <section className="flex flex-col gap-2.5">
+        <SectionHeader
+          title="Money moves"
+          action={<Link href="/deals" className="text-xs text-accent">All deals</Link>}
+        />
 
         {moneyMoves.length === 0 ? (
           <Card>

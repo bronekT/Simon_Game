@@ -282,7 +282,7 @@ export default async function DealDetail({
 
           {/* Detailed per-lead coaching: exact phrasing + technique */}
           {(appt.analysis?.coaching?.length ?? 0) > 0 && (
-            <Disclosure title="🎯 Coaching — how to play it next time" tone="accent">
+            <Disclosure title="How to play it next time" tone="accent">
               <div className="flex flex-col gap-3 text-left">
                 {appt.analysis!.coaching!.map((c, i) => (
                   <div key={i} className="border-l-2 border-accent/40 pl-3">
@@ -308,7 +308,7 @@ export default async function DealDetail({
             href={`/deals/${deal.id}/coaching`}
             className="rounded-card border border-accent/40 bg-accent/10 p-3 text-center text-sm font-medium text-accent active:scale-[0.99]"
           >
-            🎓 Open detailed coaching breakdown →
+            Detailed coaching breakdown →
           </Link>
         </section>
       ) : (
@@ -331,7 +331,7 @@ export default async function DealDetail({
           <form action={generateFollowups}>
             <input type="hidden" name="id" value={deal.id} />
             <button className="rounded-full border border-accent/50 px-3 py-1 text-xs font-medium text-accent active:scale-95">
-              ✨ Generate
+              Generate
             </button>
           </form>
         </div>
@@ -340,7 +340,7 @@ export default async function DealDetail({
         ) : (
           <Card>
             <p className="text-sm text-muted">
-              No pending email / SMS / calendar items. Tap <b className="text-accent">✨ Generate</b>{" "}
+              No pending email / SMS / calendar items. Tap <b className="text-accent">Generate</b>{" "}
               to draft close-oriented follow-ups, or approved ones live in <b>To approve</b>.
             </p>
           </Card>

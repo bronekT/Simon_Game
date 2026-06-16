@@ -37,7 +37,7 @@ export default async function Coaching({
     <main className="flex flex-col gap-4">
       <header className="pt-2">
         <Link href={`/deals/${id}`} className="text-sm text-accent">← {deal.client_name}</Link>
-        <h1 className="mt-2 text-2xl font-semibold">🎓 Detailed coaching</h1>
+        <h1 className="mt-2 text-2xl font-semibold">Detailed coaching</h1>
       </header>
 
       {error && (
