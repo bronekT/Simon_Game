@@ -24,10 +24,10 @@ export function PullToRefresh() {
     };
 
     function onStart(e: TouchEvent) {
-      startY.current = !busy.current && window.scrollY <= 0 ? e.touches[0].clientY : null;
+      startY.current = !busy.current && window.scrollY <= 0 && e.touches[0] ? e.touches[0].clientY : null;
     }
     function onMove(e: TouchEvent) {
-      if (startY.current == null || busy.current) return;
+      if (startY.current == null || busy.current || !e.touches[0]) return;
       const dy = e.touches[0].clientY - startY.current;
       // Only react to a downward pull while already scrolled to the top.
       setP(dy > 0 && window.scrollY <= 0 ? Math.min(dy * 0.5, MAX) : 0);
@@ -39,7 +39,11 @@ export function PullToRefresh() {
         busy.current = true;
         setRefreshing(true);
         setP(THRESHOLD);
-        router.refresh();
+        try {
+          router.refresh();
+        } catch {
+          /* refresh is best-effort */
+        }
         window.setTimeout(() => {
           busy.current = false;
           setRefreshing(false);
