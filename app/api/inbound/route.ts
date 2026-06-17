@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { runPipeline } from "@/lib/pipeline";
+import { produceFollowups } from "@/lib/followups";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -48,6 +49,17 @@ export async function POST(request: Request) {
       { status: 200 },
     );
   }
+
+  // No client here to fire step 2, so generate follow-ups + coaching inline for
+  // appointments (extraction was a single fast call, leaving room within 60s).
+  if (result.recordType === "appointment" && result.dealId) {
+    try {
+      await produceFollowups(admin, userId, result.dealId);
+    } catch {
+      /* best effort — the deal is already complete */
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     dealId: result.dealId,

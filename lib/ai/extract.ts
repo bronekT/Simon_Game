@@ -150,9 +150,10 @@ export async function extract(
 ): Promise<ExtractResult> {
   const anthropic = getAnthropic();
 
-  // Very long recordings (full meetings) can be huge. Keep the whole thing if it
-  // fits; otherwise send the beginning + the end (names/needs are usually up top,
-  // the agreed time is usually at the end) so extraction stays fast and reliable.
+  // Read the WHOLE meeting — 1–3 hour recordings are normal. Claude prefills huge
+  // inputs in seconds (the cost is output tokens, not input length), so even a
+  // multi-hour transcript extracts in well under a minute. We only trim in the
+  // extreme case where it would exceed the model's context window.
   transcript = boundTranscript(transcript);
 
   const context = `Company: ${settings.company_name ?? "(unknown)"}
@@ -212,15 +213,16 @@ function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
-// Keep transcripts within a size that the model handles quickly. Below the cap,
-// pass through untouched; above it, keep the head and the tail (the parts that
-// hold the name, the doors, and the agreed meeting time).
+// Only guard against exceeding the model's context window (~200k tokens). A
+// 1–3 hour meeting (~35–80k tokens) passes through UNTOUCHED and is read in full.
+// Past the ceiling (~8+ hours of speech) we keep the head + tail, which hold the
+// name, the doors, and the agreed meeting time.
 function boundTranscript(t: string): string {
-  const MAX = 48_000; // chars (~12k tokens) — full meetings still fit comfortably
+  const MAX = 560_000; // chars (~140k tokens) — leaves headroom under the 200k window
   if (t.length <= MAX) return t;
-  const head = t.slice(0, 32_000);
-  const tail = t.slice(-14_000);
-  return `${head}\n\n…[middle of the recording trimmed for length]…\n\n${tail}`;
+  const head = t.slice(0, 400_000);
+  const tail = t.slice(-120_000);
+  return `${head}\n\n…[middle of a very long recording trimmed to fit]…\n\n${tail}`;
 }
 
 // A concrete date table in the business's timezone (Ontario / America/Toronto)

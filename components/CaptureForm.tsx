@@ -48,6 +48,19 @@ export function CaptureForm({
       }
       setPhase("success");
       form.reset();
+
+      // Step 2 (background): generate polished follow-ups + coaching. Fired and
+      // forgotten — the deal already exists; this fills in the AI follow-ups a
+      // few seconds later. keepalive lets it survive navigation.
+      if (json.dealId) {
+        fetch("/api/capture/followups", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ dealId: json.dealId }),
+          keepalive: true,
+        }).catch(() => {});
+      }
+
       // Refresh data everywhere, then reveal the result.
       router.refresh();
       window.setTimeout(() => {

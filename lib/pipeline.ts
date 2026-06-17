@@ -1,6 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { extract, type SettingsContext } from "./ai/extract";
-import { writeFollowups } from "./ai/write";
 import { safeDraftType, type Draft, type Extraction } from "./ai/schema";
 import { chooseMatch, type DealCandidate } from "./match";
 import { resolveWhen } from "./datetime";
@@ -161,7 +160,11 @@ export async function analyzeAppointment(
     return { ok: true, dealId, appointmentId, created, matchedBy, recordType: data.record_type };
   }
 
-  // Fill the deal + queue the calendar event / confirmation right now.
+  // Fill the deal + queue the calendar event / confirmation right now. This is a
+  // SINGLE AI call (extract), so it stays fast and reliable for ANY transcript
+  // length — a 3-hour meeting prefills in seconds. Polished follow-ups + detailed
+  // coaching are produced in a SEPARATE step (produceFollowups) so they never
+  // compete with extraction for the function's time budget.
   await applyDealUpdate(supabase, dealId, data);
   await insertDrafts(supabase, userId, dealId, drafts);
   await enqueueActions(supabase, {
@@ -174,34 +177,7 @@ export async function analyzeAppointment(
     recordType: data.record_type,
   });
 
-  // 5. BEST-EFFORT enhancement (appointments): polished follow-ups + detailed
-  // coaching. Time-bounded so it can NEVER push the request past the 60s limit —
-  // if it doesn't finish, the deal is already complete and ready-made templates
-  // cover follow-ups (user can also tap Generate for AI ones).
-  if (data.record_type === "appointment") {
-    const writer = await withTimeout(writeFollowups(data, settings), 18_000, null);
-    if (writer && (writer.coach_note || writer.coaching.length > 0 || writer.drafts.length > 0)) {
-      await supabase
-        .from("appointments")
-        .update({ analysis: { ...data, coach_note: writer.coach_note, coaching: writer.coaching } })
-        .eq("id", appointmentId);
-      if (writer.drafts.length > 0) {
-        await insertDrafts(supabase, userId, dealId, writer.drafts);
-        await enqueueMessages(supabase, { userId, dealId, appointmentId, drafts: writer.drafts, keyPrefix: "w" });
-      }
-    }
-  }
-
   return { ok: true, dealId, appointmentId, created, matchedBy, recordType: data.record_type };
-}
-
-// Resolve a promise but never wait longer than `ms` — returns `fallback` on
-// timeout or error. Keeps an optional AI step from blowing the function budget.
-function withTimeout<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
-  return Promise.race([
-    p.catch(() => fallback),
-    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
-  ]);
 }
 
 async function insertDrafts(
@@ -222,33 +198,6 @@ async function insertDrafts(
       status: "draft",
     })),
   );
-}
-
-// Queue just message follow-ups (email/sms) — used for the best-effort writer
-// drafts, with a distinct idempotency prefix so they don't clash with step 5.
-async function enqueueMessages(
-  supabase: SupabaseClient,
-  args: { userId: string; dealId: string; appointmentId: string; drafts: Draft[]; keyPrefix: string },
-) {
-  const { data: contact } = await supabase
-    .from("deals")
-    .select("email, phone")
-    .eq("id", args.dealId)
-    .single();
-  const rows = args.drafts.map((d, i) => ({
-    user_id: args.userId,
-    deal_id: args.dealId,
-    kind: (d.channel === "email" ? "email" : "sms") as "email" | "sms",
-    payload:
-      d.channel === "email"
-        ? { subject: d.subject ?? "", body: d.body, to: contact?.email ?? null, draft_type: d.type }
-        : { body: d.body, to: contact?.phone ?? null, draft_type: d.type },
-    status: "proposed",
-    idempotency_key: `${args.appointmentId}-${args.keyPrefix}msg-${i}`,
-  }));
-  if (rows.length > 0) {
-    await supabase.from("actions_queue").upsert(rows, { onConflict: "idempotency_key", ignoreDuplicates: true });
-  }
 }
 
 async function enqueueActions(

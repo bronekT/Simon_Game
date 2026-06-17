@@ -127,7 +127,7 @@ export async function writeFollowups(
   try {
     const message = await anthropic.messages.create({
       model: MODELS.write,
-      max_tokens: 1400,
+      max_tokens: 2200,
       system: `${companyKnowledge()}\n\n${SYSTEM}`,
       messages: [{ role: "user", content: brief }],
     });
