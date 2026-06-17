@@ -80,6 +80,28 @@ async function propagateName(
       })
       .eq("id", a.id);
   }
+
+  // Rewrite the name EVERYWHERE in the AI analysis too — summary, coaching, the
+  // "what went well / to improve" notes, hooks, etc. (not just the follow-ups).
+  const { data: appts } = await supabase
+    .from("appointments")
+    .select("id, summary, analysis")
+    .eq("deal_id", dealId);
+  for (const a of appts ?? []) {
+    let analysis = a.analysis as unknown;
+    if (analysis) {
+      try {
+        const rewritten = renameIn(JSON.stringify(analysis), oldName, newName);
+        if (rewritten) analysis = JSON.parse(rewritten);
+      } catch {
+        /* keep original analysis if the rewrite would break the JSON */
+      }
+    }
+    await supabase
+      .from("appointments")
+      .update({ summary: renameIn(a.summary as string | null, oldName, newName), analysis })
+      .eq("id", a.id);
+  }
 }
 
 export async function updateDeal(form: FormData) {
@@ -121,6 +143,7 @@ export async function updateDeal(form: FormData) {
   if ((str(form, "status") ?? "new") === "won") await recordWon(supabase, id);
 
   revalidatePath(`/deals/${id}`);
+  revalidatePath(`/deals/${id}/coaching`);
   revalidatePath("/earnings");
   revalidatePath("/deals");
   revalidatePath("/");

@@ -19,12 +19,16 @@ export default async function EditDeal({ params }: { params: Promise<{ id: strin
 
   return (
     <main className="flex flex-col gap-5">
-      <header className="pt-2">
-        <Link href={`/deals/${id}`} className="text-sm text-accent">← Back</Link>
-        <h1 className="mt-2 text-2xl font-semibold">Edit deal</h1>
+      <header className="flex items-center justify-between pt-2">
+        {/* Back SAVES — no need to tap "Save". Write, tap Back, you're done. */}
+        <button type="submit" form="edit-deal-form" className="text-sm font-medium text-accent">
+          ← Save &amp; back
+        </button>
+        <h1 className="text-base font-semibold">Edit deal</h1>
+        <span className="w-16" />
       </header>
 
-      <form action={updateDeal} className="flex flex-col gap-4">
+      <form id="edit-deal-form" action={updateDeal} className="flex flex-col gap-4">
         <input type="hidden" name="id" value={id} />
 
         <Field label="Client name">
