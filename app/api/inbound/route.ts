@@ -50,14 +50,12 @@ export async function POST(request: Request) {
     );
   }
 
-  // No client here to fire step 2, so generate follow-ups + coaching inline for
-  // appointments (extraction was a single fast call, leaving room within 60s).
+  // Step 2 (follow-ups + coaching) runs in its OWN request so the webhook stays
+  // comfortably under 60s. For an appointment we kick it off without blocking the
+  // response (best-effort); the deal is already fully filled either way, and the
+  // deal's Generate button always reproduces it on demand.
   if (result.recordType === "appointment" && result.dealId) {
-    try {
-      await produceFollowups(admin, userId, result.dealId);
-    } catch {
-      /* best effort — the deal is already complete */
-    }
+    produceFollowups(admin, userId, result.dealId).catch(() => {});
   }
 
   return NextResponse.json({
