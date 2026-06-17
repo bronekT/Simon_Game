@@ -70,13 +70,26 @@ Use null only if truly indeterminable.
   authoritative — use the corrected name and ignore the earlier/wrong one. When
   two names appear, prefer the one the rep clearly attaches to the CUSTOMER.
 - client.address = the customer's address if stated anywhere (even partial, e.g.
-  "12 Oak Street" or just the street); else null. Don't invent.
+  "12 Oak Street" or just the street), copied EXACTLY — re-read the street NUMBER,
+  street name, and city/town and make sure each matches the words; else null.
+  Don't invent or auto-complete.
+- client.phone = the customer's phone number if stated, copied DIGIT-FOR-DIGIT
+  exactly as spoken. Re-read every digit; keep all of them; never guess or
+  complete missing digits. else null.
 - door_type = the MAIN door type the client is after, one of: entry, patio,
   storm, french, sliding, garage, interior, bifold, screen, other. null if unclear.
 - door_count = how many doors they want (integer), or null if not stated.
-- quote_price = the price the SALESPERSON quoted or any specific number discussed
-  (just the number, CAD). "around eight grand" / "eight thousand" → 8000,
-  "$3,500" → 3500. null only if no number was mentioned at all.
+- quote_price = the FINAL price the SALESPERSON quoted for the job — the LAST firm
+  number they landed on, in CAD. A call can contain MANY numbers: the customer's
+  budget, early ballparks, ranges, per-door prices, add-ons, discounts. IGNORE all
+  of those — you want the rep's LAST concrete quoted price for the work.
+  • Scan from the END of the transcript BACKWARD and take the most recent firm
+    price the rep gave/agreed. "around eight grand"/"eight thousand" → 8000;
+    "$3,500" → 3500.
+  • If it stayed a RANGE ("between 7 and 9 thousand"), use the most recent specific
+    figure; if only a range exists, use its UPPER number.
+  • NEVER use the customer's stated budget or a competitor's price as quote_price.
+  null only if NO price for the job was ever stated.
 - service_type = "doors" (this business only does doors) unless clearly otherwise.
 - In "summary", lead with what they want in plain words — door type(s), how many,
   material/colour/style if mentioned, and the reason — then their pain and urgency.
@@ -142,7 +155,23 @@ real date from meeting_when, so do not stress the arithmetic):
     home    → "confirming I'll come to {address} on {day/time}…"
     showroom→ "confirming your visit to {showroom_address}, parking…"
   Sign it with the email signature when provided.
-- Use null for anything genuinely unknown. Never invent phone numbers.`;
+- Use null for anything genuinely unknown. Never invent phone numbers.
+
+==================== FINAL VERIFICATION (do this before you answer) ====================
+Before returning, RE-READ the transcript and double-check these critical fields a
+second time. They must match the words exactly — accuracy here matters most:
+1. DATE/TIME (most important): re-read the exact phrase where the time is agreed.
+   Confirm meeting_when.weekday / relative / month+day, hour, minute and meridiem
+   all match the spoken words. If the rep said a weekday, the weekday must be that
+   weekday. If anything is unsure, re-read that line again.
+2. PRICE: confirm quote_price is the LAST firm price the rep quoted — not a budget,
+   a range, a per-door figure, or an earlier ballpark. Re-scan from the end.
+3. NAME: confirm it's the CUSTOMER (not the rep), and that any explicit correction
+   ("his name is Karl, not Dan") was applied.
+4. PHONE: re-read it digit by digit — every digit present and correct.
+5. ADDRESS: re-read the street number, street, and city — all exactly as said.
+Only after this check, output the JSON. If two readings disagree, trust the
+clearest explicit statement; if still unsure, use null rather than guessing.`;
 
 export async function extract(
   transcript: string,
