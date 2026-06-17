@@ -114,19 +114,9 @@ export async function analyzeAppointment(
     !isNote, // createIfMissing
   );
 
-  // 4 (branch by record_type).
+  // 4. A booking gets a deterministic confirmation SMS (no AI — always works).
   let drafts: Draft[] = isNote ? [] : data.drafts;
-  let coachNote = "";
-  let coaching: unknown[] = [];
-  if (data.record_type === "appointment") {
-    // Full analysis path: polished follow-ups + detailed coaching (Sonnet).
-    const writer = await writeFollowups(data, settings);
-    if (writer.drafts.length > 0) drafts = writer.drafts;
-    coachNote = writer.coach_note;
-    coaching = writer.coaching;
-  }
   if (data.record_type === "booking_call") {
-    // A polished, structured confirmation (emoji, address, time) every time.
     const confirmation = bookingConfirmation({
       name: data.client.name,
       startIso: data.proposed_event?.start ?? data.followup_at,
@@ -140,7 +130,9 @@ export async function analyzeAppointment(
     ];
   }
 
-  // Persist analysis onto the appointment.
+  // Persist analysis from the SINGLE extract call IMMEDIATELY. The deal is fully
+  // filled here — so even if the optional follow-up writer below is slow (Hobby
+  // caps every function at 60s), the lead is never left half-processed.
   await supabase
     .from("appointments")
     .update({
@@ -149,7 +141,7 @@ export async function analyzeAppointment(
       location_type: data.location_type,
       occurred_at: data.proposed_event?.start ?? new Date().toISOString(),
       summary: data.summary,
-      analysis: { ...data, coach_note: coachNote, coaching },
+      analysis: { ...data, coach_note: "", coaching: [] },
       talk_ratio: Math.round(data.talk_ratio),
       sentiment: data.sentiment,
       score_rapport: Math.round(data.scores.rapport),
@@ -169,28 +161,9 @@ export async function analyzeAppointment(
     return { ok: true, dealId, appointmentId, created, matchedBy, recordType: data.record_type };
   }
 
-  // Update the deal from the analysis.
+  // Fill the deal + queue the calendar event / confirmation right now.
   await applyDealUpdate(supabase, dealId, data);
-
-  // Persist generated drafts (content the user can read/copy on the deal).
-  if (drafts.length > 0) {
-    await supabase.from("drafts").insert(
-      drafts.map((d) => ({
-        user_id: userId,
-        deal_id: dealId,
-        type: safeDraftType(d.type),
-        channel: d.channel,
-        subject: d.subject || null,
-        body: d.body,
-        status: "draft",
-      })),
-    );
-  }
-
-  // 5. Queue actions — everything that MAY leave the system goes into
-  // actions_queue as `proposed`. Nothing is sent yet (approval is Phase 2,
-  // Google push is Phase 3). Idempotency keys are deterministic so a retry
-  // never duplicates.
+  await insertDrafts(supabase, userId, dealId, drafts);
   await enqueueActions(supabase, {
     userId,
     dealId,
@@ -201,7 +174,81 @@ export async function analyzeAppointment(
     recordType: data.record_type,
   });
 
+  // 5. BEST-EFFORT enhancement (appointments): polished follow-ups + detailed
+  // coaching. Time-bounded so it can NEVER push the request past the 60s limit —
+  // if it doesn't finish, the deal is already complete and ready-made templates
+  // cover follow-ups (user can also tap Generate for AI ones).
+  if (data.record_type === "appointment") {
+    const writer = await withTimeout(writeFollowups(data, settings), 18_000, null);
+    if (writer && (writer.coach_note || writer.coaching.length > 0 || writer.drafts.length > 0)) {
+      await supabase
+        .from("appointments")
+        .update({ analysis: { ...data, coach_note: writer.coach_note, coaching: writer.coaching } })
+        .eq("id", appointmentId);
+      if (writer.drafts.length > 0) {
+        await insertDrafts(supabase, userId, dealId, writer.drafts);
+        await enqueueMessages(supabase, { userId, dealId, appointmentId, drafts: writer.drafts, keyPrefix: "w" });
+      }
+    }
+  }
+
   return { ok: true, dealId, appointmentId, created, matchedBy, recordType: data.record_type };
+}
+
+// Resolve a promise but never wait longer than `ms` — returns `fallback` on
+// timeout or error. Keeps an optional AI step from blowing the function budget.
+function withTimeout<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([
+    p.catch(() => fallback),
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
+  ]);
+}
+
+async function insertDrafts(
+  supabase: SupabaseClient,
+  userId: string,
+  dealId: string,
+  drafts: Draft[],
+) {
+  if (drafts.length === 0) return;
+  await supabase.from("drafts").insert(
+    drafts.map((d) => ({
+      user_id: userId,
+      deal_id: dealId,
+      type: safeDraftType(d.type),
+      channel: d.channel,
+      subject: d.subject || null,
+      body: d.body,
+      status: "draft",
+    })),
+  );
+}
+
+// Queue just message follow-ups (email/sms) — used for the best-effort writer
+// drafts, with a distinct idempotency prefix so they don't clash with step 5.
+async function enqueueMessages(
+  supabase: SupabaseClient,
+  args: { userId: string; dealId: string; appointmentId: string; drafts: Draft[]; keyPrefix: string },
+) {
+  const { data: contact } = await supabase
+    .from("deals")
+    .select("email, phone")
+    .eq("id", args.dealId)
+    .single();
+  const rows = args.drafts.map((d, i) => ({
+    user_id: args.userId,
+    deal_id: args.dealId,
+    kind: (d.channel === "email" ? "email" : "sms") as "email" | "sms",
+    payload:
+      d.channel === "email"
+        ? { subject: d.subject ?? "", body: d.body, to: contact?.email ?? null, draft_type: d.type }
+        : { body: d.body, to: contact?.phone ?? null, draft_type: d.type },
+    status: "proposed",
+    idempotency_key: `${args.appointmentId}-${args.keyPrefix}msg-${i}`,
+  }));
+  if (rows.length > 0) {
+    await supabase.from("actions_queue").upsert(rows, { onConflict: "idempotency_key", ignoreDuplicates: true });
+  }
 }
 
 async function enqueueActions(

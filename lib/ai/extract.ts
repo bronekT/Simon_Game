@@ -150,6 +150,11 @@ export async function extract(
 ): Promise<ExtractResult> {
   const anthropic = getAnthropic();
 
+  // Very long recordings (full meetings) can be huge. Keep the whole thing if it
+  // fits; otherwise send the beginning + the end (names/needs are usually up top,
+  // the agreed time is usually at the end) so extraction stays fast and reliable.
+  transcript = boundTranscript(transcript);
+
   const context = `Company: ${settings.company_name ?? "(unknown)"}
 Showroom address: ${settings.showroom_address ?? "(none)"}
 Email signature: ${settings.email_signature ?? "(none)"}
@@ -167,7 +172,7 @@ Return the JSON object now.`;
   try {
     const message = await anthropic.messages.create({
       model: MODELS.extract,
-      max_tokens: 4000,
+      max_tokens: 2000,
       system: `${companyKnowledge()}\n\n${SYSTEM}`,
       messages: [{ role: "user", content: context }],
     });
@@ -205,6 +210,17 @@ Return the JSON object now.`;
 
 function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
+}
+
+// Keep transcripts within a size that the model handles quickly. Below the cap,
+// pass through untouched; above it, keep the head and the tail (the parts that
+// hold the name, the doors, and the agreed meeting time).
+function boundTranscript(t: string): string {
+  const MAX = 48_000; // chars (~12k tokens) — full meetings still fit comfortably
+  if (t.length <= MAX) return t;
+  const head = t.slice(0, 32_000);
+  const tail = t.slice(-14_000);
+  return `${head}\n\n…[middle of the recording trimmed for length]…\n\n${tail}`;
 }
 
 // A concrete date table in the business's timezone (Ontario / America/Toronto)
