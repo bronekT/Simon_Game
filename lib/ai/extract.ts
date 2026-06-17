@@ -64,6 +64,11 @@ Use null only if truly indeterminable.
   contact details. Use at least the first name. It is NOT the salesperson (the
   one selling/measuring/quoting). If a name truly never appears, use null — never
   invent one, and never use the salesperson's name.
+  IMPORTANT — the name is OFTEN stated up front (the rep introducing the client,
+  or "I'm here with ___"). If the rep EXPLICITLY states or corrects the name
+  (e.g. "his name is Karl, not Dan", "it's Karl with a K"), that correction is
+  authoritative — use the corrected name and ignore the earlier/wrong one. When
+  two names appear, prefer the one the rep clearly attaches to the CUSTOMER.
 - client.address = the customer's address if stated anywhere (even partial, e.g.
   "12 Oak Street" or just the street); else null. Don't invent.
 - door_type = the MAIN door type the client is after, one of: entry, patio,

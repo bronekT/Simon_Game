@@ -6,10 +6,12 @@ import { DoorWantLine, EngagementChips } from "@/components/DealMeta";
 import { StatusSelect } from "@/components/StatusSelect";
 import { SubmitButton } from "@/components/SubmitButton";
 import { type QueueAction } from "@/components/ApproveList";
-import { MeetingConfirm, FollowupActions } from "@/components/DealActions";
+import { MeetingConfirm } from "@/components/DealActions";
+import { FollowupTabs } from "@/components/FollowupTabs";
 import { PendingOverlay } from "@/components/PendingOverlay";
 import { processTranscript } from "@/app/(app)/capture/actions";
 import { bumpFollowups, deleteDeal, generateFollowups } from "./quick-actions";
+import { emailTemplates, smsTemplates } from "@/lib/templates";
 import { money, titleCase, dateTime, shortDate } from "@/lib/format";
 import { DOOR_LABELS, type Deal } from "@/lib/types";
 
@@ -106,6 +108,22 @@ export default async function DealDetail({
   }));
   const meetingAction = actions.find((a) => a.kind === "calendar_event") ?? null;
   const msgActions = actions.filter((a) => a.kind !== "calendar_event");
+
+  // Settings power the ready-to-send templates (showroom address, signature).
+  const { data: settings } = await supabase
+    .from("settings")
+    .select("showroom_address, email_signature")
+    .maybeSingle();
+  const tplEmail = emailTemplates({
+    name: deal.client_name,
+    showroomAddress: settings?.showroom_address ?? null,
+    signature: settings?.email_signature ?? null,
+  });
+  const tplSms = smsTemplates({
+    name: deal.client_name,
+    showroomAddress: settings?.showroom_address ?? null,
+    address: deal.address,
+  });
 
   return (
     <main className="flex flex-col gap-4">
@@ -337,15 +355,12 @@ export default async function DealDetail({
             </button>
           </form>
         </div>
-        {msgActions.length > 0 ? (
-          <FollowupActions actions={msgActions} />
-        ) : (
-          <Card>
-            <p className="text-sm text-muted">
-              No email / SMS yet. Tap <b className="text-accent">Generate</b> to draft close-oriented follow-ups.
-            </p>
-          </Card>
-        )}
+        <FollowupTabs
+          actions={msgActions}
+          emailTemplates={tplEmail}
+          smsTemplates={tplSms}
+          to={{ email: deal.email, phone: deal.phone }}
+        />
       </section>
 
       {/* History timeline — every capture, meeting stays at the top */}

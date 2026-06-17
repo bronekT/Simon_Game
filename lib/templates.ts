@@ -62,6 +62,94 @@ export function bookingConfirmation(opts: {
   ].join("\n");
 }
 
+// ── Ready-to-send follow-up templates, by PURPOSE ─────────────────────────────
+// Deterministic (no AI), name pre-filled. These give a quick menu of standard
+// follow-ups — pick the purpose, the text is ready. Always available.
+export interface FollowupTemplate {
+  key: string;
+  label: string; // the purpose shown on the card
+  subject?: string; // email only
+  body: string;
+}
+
+function firstName(name: string | null | undefined): string {
+  const n = (name ?? "").trim().split(/\s+/)[0];
+  return n || "there";
+}
+
+export function smsTemplates(opts: {
+  name: string | null;
+  showroomAddress: string | null;
+  address: string | null;
+}): FollowupTemplate[] {
+  const n = firstName(opts.name);
+  const rep = COMPANY.rep.split(/\s+/)[0]; // "Tony"
+  const showroom = opts.showroomAddress ?? "our showroom";
+  return [
+    {
+      key: "checkin",
+      label: "Gentle check-in",
+      body: `Hi ${n}, it's ${rep} from ${COMPANY.name}. Just checking in on your door project — happy to answer any questions whenever you're ready. 🙂`,
+    },
+    {
+      key: "showroom_invite",
+      label: "Showroom invite",
+      body: `Hi ${n}, ${rep} here from ${COMPANY.name}. If you'd like to see and feel the door options in person, come by ${showroom} any time — I can walk you through styles, glass and finishes. When works for you?`,
+    },
+    {
+      key: "discount",
+      label: "Discount / promo",
+      body: `Hi ${n}, quick one — we've got a promo running right now. If we lock in your door this week I can hold a 5% discount for you. Want me to set it aside?`,
+    },
+    {
+      key: "financing",
+      label: "Financing",
+      body: `Hi ${n}, just so you know we offer flexible financing on our doors — you can spread it into easy monthly payments. Want me to send the options over?`,
+    },
+    {
+      key: "last_chance",
+      label: "Last chance",
+      body: `Hi ${n}, I'm about to release the quote I put together for you. Want me to hold it a few more days, or should we go ahead and book the install?`,
+    },
+  ];
+}
+
+export function emailTemplates(opts: {
+  name: string | null;
+  showroomAddress: string | null;
+  signature: string | null;
+}): FollowupTemplate[] {
+  const n = firstName(opts.name);
+  const sig = opts.signature ?? `${COMPANY.rep}\n${COMPANY.name}\n${COMPANY.phone}`;
+  const showroom = opts.showroomAddress ?? "our showroom";
+  return [
+    {
+      key: "checkin",
+      label: "Gentle check-in",
+      subject: "Following up on your new door",
+      body: `Hi ${n},\n\nJust following up on your door project — I wanted to make sure you have everything you need to move forward. Happy to answer any questions, tweak the options, or take a fresh look at pricing.\n\nWhat would you like to do next?\n\n${sig}`,
+    },
+    {
+      key: "showroom_invite",
+      label: "Showroom invite",
+      subject: "Come see your door options in person",
+      body: `Hi ${n},\n\nIf you'd like to see and feel the options in person before deciding, you're welcome to visit ${showroom}. I can walk you through styles, glass, hardware and finishes so you can choose with confidence.\n\nWhen would be a good time for you?\n\n${sig}`,
+    },
+    {
+      key: "discount",
+      label: "Discount / promo",
+      subject: "A little something to help you decide",
+      body: `Hi ${n},\n\nWe've got a promotion running at the moment — if we lock in your door this week I can hold a 5% discount for you. It's a great time to get the project moving before lead times stretch out.\n\nWant me to set it aside?\n\n${sig}`,
+    },
+    {
+      key: "last_chance",
+      label: "Last chance",
+      subject: "Should I hold your quote?",
+      body: `Hi ${n},\n\nI'm about to release the quote I put together for you. I'd love to get your new door underway — would you like me to hold the pricing a few more days, or should we go ahead and book the install?\n\nEither way, just let me know.\n\n${sig}`,
+    },
+  ];
+}
+
 // A rich Google Calendar event description (door details + a quick checklist).
 export function eventDescription(opts: {
   summary: string | null;

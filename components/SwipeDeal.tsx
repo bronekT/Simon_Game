@@ -11,6 +11,7 @@ export function SwipeDeal({ deal }: { deal: Deal }) {
   const router = useRouter();
   const startX = useRef(0);
   const startY = useRef(0);
+  const moved = useRef(false); // did the finger travel (scroll/swipe) vs a clean tap?
   const [dx, setDx] = useState(0);
   const [swiping, setSwiping] = useState(false);
   const wonRef = useRef<HTMLFormElement>(null);
@@ -20,13 +21,17 @@ export function SwipeDeal({ deal }: { deal: Deal }) {
   function onStart(e: React.TouchEvent) {
     startX.current = e.touches[0].clientX;
     startY.current = e.touches[0].clientY;
+    moved.current = false;
     setSwiping(true);
   }
   function onMove(e: React.TouchEvent) {
     if (!swiping) return;
     const x = e.touches[0].clientX - startX.current;
     const y = e.touches[0].clientY - startY.current;
-    // Only treat as horizontal swipe if mostly horizontal.
+    // Any real travel (a vertical scroll OR a horizontal swipe) means this is
+    // NOT a tap — so it must never open the deal.
+    if (Math.abs(x) > 10 || Math.abs(y) > 10) moved.current = true;
+    // Only follow the finger for a clearly-horizontal swipe (won/lost gesture).
     if (Math.abs(x) > Math.abs(y)) setDx(x);
   }
   function onEnd() {
@@ -35,7 +40,8 @@ export function SwipeDeal({ deal }: { deal: Deal }) {
       wonRef.current?.requestSubmit();
     } else if (dx < -THRESHOLD) {
       lostRef.current?.requestSubmit();
-    } else if (Math.abs(dx) < 8) {
+    } else if (!moved.current) {
+      // A clean tap (no scroll, no swipe) → open the deal.
       router.push(`/deals/${deal.id}`);
     }
     setDx(0);
