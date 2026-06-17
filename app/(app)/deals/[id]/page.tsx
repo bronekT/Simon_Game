@@ -4,12 +4,10 @@ import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/Card";
 import { DoorWantLine, EngagementChips } from "@/components/DealMeta";
 import { StatusSelect } from "@/components/StatusSelect";
-import { SubmitButton } from "@/components/SubmitButton";
 import { type QueueAction } from "@/components/ApproveList";
 import { MeetingConfirm } from "@/components/DealActions";
 import { FollowupTabs } from "@/components/FollowupTabs";
-import { PendingOverlay } from "@/components/PendingOverlay";
-import { processTranscript } from "@/app/(app)/capture/actions";
+import { CaptureForm } from "@/components/CaptureForm";
 import { bumpFollowups, deleteDeal, generateFollowups } from "./quick-actions";
 import { emailTemplates, smsTemplates } from "@/lib/templates";
 import { money, titleCase, dateTime, shortDate } from "@/lib/format";
@@ -417,24 +415,7 @@ export default async function DealDetail({
           New call transcript, a screenshot of their text/email, or a file. The AI
           re-reads it and updates the status, follow-up, and proposed actions.
         </p>
-        <form action={processTranscript} className="flex flex-col gap-3">
-          <input type="hidden" name="deal_id" value={deal.id} />
-          <input type="hidden" name="back_to" value={`/deals/${deal.id}`} />
-          <textarea
-            name="transcript"
-            rows={3}
-            placeholder="Paste new transcript / note (optional if attaching a file)…"
-            className="w-full resize-y px-3 py-2.5 text-sm"
-          />
-          <input
-            type="file"
-            name="file"
-            accept="image/*,.txt,.md,text/plain"
-            className="w-full rounded-xl border border-hairline bg-white/[0.04] px-3 py-2 text-sm text-muted file:mr-3 file:rounded-full file:border-0 file:bg-accent file:px-3 file:py-1 file:text-bg"
-          />
-          <SubmitButton pendingLabel="Updating…">Update from this</SubmitButton>
-          <PendingOverlay label="Updating this client…" />
-        </form>
+        <CaptureForm dealId={deal.id} compact />
       </Card>
     </main>
   );

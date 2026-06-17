@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { processTranscript, reprocessAppointment } from "./actions";
+import { reprocessAppointment } from "./actions";
 import { Card } from "@/components/Card";
-import { SubmitButton } from "@/components/SubmitButton";
-import { PendingOverlay } from "@/components/PendingOverlay";
+import { CaptureForm } from "@/components/CaptureForm";
 import { dateTime } from "@/lib/format";
 import type { Deal } from "@/lib/types";
 
@@ -85,60 +84,13 @@ export default async function Capture({
         </Card>
       )}
 
-      <form action={processTranscript} className="flex flex-col gap-4">
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm text-muted">Transcript</span>
-          <textarea
-            name="transcript"
-            rows={10}
-            placeholder="Paste the full transcript here…"
-            className="w-full resize-y px-3 py-2.5 text-sm leading-relaxed"
-          />
-        </label>
+      {error && (
+        <Card className="border-risk/40">
+          <p className="text-sm text-risk">{error}</p>
+        </Card>
+      )}
 
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm text-muted">…or attach a screenshot / file</span>
-          <input
-            type="file"
-            name="file"
-            accept="image/*,.txt,.md,text/plain"
-            className="w-full rounded-xl border border-hairline bg-white/[0.04] px-3 py-2.5 text-sm text-muted file:mr-3 file:rounded-full file:border-0 file:bg-accent file:px-3 file:py-1 file:text-bg"
-          />
-          <span className="text-[11px] text-muted">
-            A screenshot of a text/WhatsApp/email, or a transcript file — the AI reads it.
-          </span>
-        </label>
-
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm text-muted">Attach to</span>
-          <select name="deal_id" defaultValue="" className="w-full px-3 py-2.5">
-            <option value="">✨ New deal from this transcript (auto-detect)</option>
-            {deals.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.client_name} · {d.status}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        {error && (
-          <Card className="border-risk/40">
-            <p className="text-sm text-risk">{error}</p>
-            <p className="mt-1 text-xs text-muted">
-              The transcript was saved and flagged for review — nothing was acted
-              on. Fix and try again, or attach it to a deal manually.
-            </p>
-          </Card>
-        )}
-
-        <SubmitButton pendingLabel="Analyzing…">Analyze</SubmitButton>
-        <PendingOverlay label="Analyzing your transcript…" />
-
-        <p className="text-center text-xs text-muted">
-          Takes ~10–20 seconds. Emails &amp; calendar events are proposed in
-          <b> To approve</b> — nothing is sent until you tap ✓.
-        </p>
-      </form>
+      <CaptureForm deals={deals} />
 
       {/* If any transcript failed to process, make it loud + offer a one-tap retry */}
       {failedCount > 0 && (

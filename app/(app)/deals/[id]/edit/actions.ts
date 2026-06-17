@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { fromLocalInput } from "@/lib/format";
 
 function str(form: FormData, key: string): string | null {
@@ -36,14 +37,15 @@ function renameIn(text: string | null | undefined, oldName: string, newName: str
 }
 
 // When the deal is renamed, rewrite the name inside its drafts + queued actions
-// so follow-ups always greet the right person.
+// so follow-ups always greet the right person. Uses the service-role client so
+// the rewrite can never be silently blocked.
 async function propagateName(
-  supabase: Awaited<ReturnType<typeof createClient>>,
   dealId: string,
   oldName: string,
   newName: string,
 ) {
   if (!oldName || oldName === newName) return;
+  const supabase = createAdminClient();
 
   const { data: drafts } = await supabase
     .from("drafts")
@@ -113,7 +115,7 @@ export async function updateDeal(form: FormData) {
     .eq("id", id);
 
   // Rename inside drafts + queued follow-ups so they greet the right person.
-  await propagateName(supabase, id, oldName, newName);
+  await propagateName(id, oldName, newName);
 
   revalidatePath(`/deals/${id}`);
   revalidatePath("/deals");
