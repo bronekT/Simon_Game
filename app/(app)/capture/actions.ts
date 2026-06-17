@@ -1,11 +1,9 @@
 "use server";
 
-import { after } from "next/server";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { ingestTranscript, analyzeAppointment } from "@/lib/pipeline";
+import { runPipeline, analyzeAppointment } from "@/lib/pipeline";
 import { imageToTranscript, isSupportedImage } from "@/lib/ai/vision";
 
 // Read the text to analyze from the textarea or an uploaded file (a .txt
@@ -26,10 +24,11 @@ async function resolveTranscript(form: FormData): Promise<string> {
   return typed;
 }
 
-// DECOUPLED: save the transcript fast, then run the heavy two-step AI pipeline in
-// the BACKGROUND (after the response). This is what stops the page from timing
-// out on Vercel — the same fix as the inbound webhook. The new deal / proposed
-// actions appear within ~15–20s; pull-to-refresh (or the banner) reveals them.
+// SYNCHRONOUS by design. The whole pipeline runs in ~10–20s, well under the
+// route's maxDuration (60s), so we run it inline: the button shows "Analyzing…",
+// then you land on the finished deal WITH its analysis. (Background processing
+// via after() proved unreliable on this host — jobs got stuck "Processing" and
+// never completed, so leads never appeared.)
 export async function processTranscript(form: FormData) {
   const attachRaw = String(form.get("deal_id") ?? "").trim();
   const attachDealId = attachRaw === "" ? null : attachRaw;
@@ -40,57 +39,36 @@ export async function processTranscript(form: FormData) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
-  const userId = user.id;
 
-  let transcript = "";
+  let result;
+  let errorMsg = "";
   try {
-    transcript = await resolveTranscript(form);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "Something went wrong reading the file.";
-    redirect(`${backTo}?error=${encodeURIComponent(msg)}`);
-  }
-  if (transcript.length < 20) {
-    redirect(`${backTo}?error=${encodeURIComponent("Add a transcript, paste text, or attach a screenshot/file.")}`);
-  }
-
-  // Save first so the transcript is never lost.
-  const appointmentId = await ingestTranscript(supabase, userId, transcript, attachDealId, "manual");
-  if (!appointmentId) {
-    redirect(`${backTo}?error=${encodeURIComponent("Could not save the transcript. Try again.")}`);
-  }
-
-  // Analyze in the background (uses the service-role client, which stays valid
-  // after the response is sent).
-  after(async () => {
-    try {
-      await analyzeAppointment(createAdminClient(), userId, appointmentId!);
-    } catch {
-      try {
-        await createAdminClient()
-          .from("appointments")
-          .update({ needs_review: true })
-          .eq("id", appointmentId!);
-      } catch {
-        /* best effort */
-      }
+    const transcript = await resolveTranscript(form);
+    if (transcript.length < 20) {
+      errorMsg = "Add a transcript, paste text, or attach a screenshot/file.";
+    } else {
+      result = await runPipeline(supabase, transcript, attachDealId, user.id, "manual");
     }
-  });
+  } catch (e) {
+    errorMsg = e instanceof Error ? e.message : "Something went wrong reading the file.";
+  }
+
+  if (errorMsg) redirect(`${backTo}?error=${encodeURIComponent(errorMsg)}`);
+  if (!result!.ok) redirect(`${backTo}?error=${encodeURIComponent(result!.error)}`);
 
   revalidatePath("/");
   revalidatePath("/deals");
   revalidatePath("/approve");
 
-  // If attached to a known deal, land there (pull-to-refresh shows the update).
-  if (attachDealId) {
-    revalidatePath(`/deals/${attachDealId}`);
-    redirect(`/deals/${attachDealId}?analyzing=1`);
-  }
-  redirect(`/capture?processing=1`);
+  // A pure note (no sales content) creates no deal — say so plainly.
+  if (!result!.dealId) redirect(`/capture?logged=note`);
+
+  revalidatePath(`/deals/${result!.dealId}`);
+  redirect(`/deals/${result!.dealId}?analyzed=1`);
 }
 
-// Re-run analysis for a transcript that failed or got stuck (e.g. an AI hiccup,
-// or a transcript that arrived but never finished processing). Same background
-// pattern — the saved transcript is reused, no re-paste needed.
+// Re-run analysis for a transcript that failed or got stuck. Synchronous too —
+// reuses the saved transcript, so no re-paste, and lands on the finished deal.
 export async function reprocessAppointment(form: FormData) {
   const appointmentId = String(form.get("appointment_id") ?? "").trim();
   if (!appointmentId) redirect("/capture");
@@ -100,26 +78,21 @@ export async function reprocessAppointment(form: FormData) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
-  const userId = user.id;
 
-  // Clear the failed flag so it shows as "processing" again immediately.
-  await supabase.from("appointments").update({ needs_review: false }).eq("id", appointmentId);
-
-  after(async () => {
-    try {
-      await analyzeAppointment(createAdminClient(), userId, appointmentId);
-    } catch {
-      try {
-        await createAdminClient()
-          .from("appointments")
-          .update({ needs_review: true })
-          .eq("id", appointmentId);
-      } catch {
-        /* best effort */
-      }
-    }
-  });
+  let result;
+  try {
+    result = await analyzeAppointment(supabase, user.id, appointmentId);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Could not reprocess.";
+    redirect(`/capture?error=${encodeURIComponent(msg)}`);
+  }
 
   revalidatePath("/capture");
-  redirect("/capture?processing=1");
+  revalidatePath("/deals");
+  revalidatePath("/approve");
+
+  if (result!.ok && result!.dealId) {
+    redirect(`/deals/${result!.dealId}?analyzed=1`);
+  }
+  redirect("/capture");
 }
