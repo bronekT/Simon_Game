@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { recordWon } from "@/lib/won";
 import { fromLocalInput } from "@/lib/format";
 
 function str(form: FormData, key: string): string | null {
@@ -117,7 +118,10 @@ export async function updateDeal(form: FormData) {
   // Rename inside drafts + queued follow-ups so they greet the right person.
   await propagateName(id, oldName, newName);
 
+  if ((str(form, "status") ?? "new") === "won") await recordWon(supabase, id);
+
   revalidatePath(`/deals/${id}`);
+  revalidatePath("/earnings");
   revalidatePath("/deals");
   revalidatePath("/");
   redirect(`/deals/${id}`);

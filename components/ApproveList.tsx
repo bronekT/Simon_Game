@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { titleCase, dateTime, toLocalInput } from "@/lib/format";
-import { approveAction, saveAction, dismissAction } from "@/app/(app)/approve/actions";
+import { approveAction, saveAction, dismissAction, dismissGroup } from "@/app/(app)/approve/actions";
 
 export interface QueueAction {
   id: string;
@@ -53,26 +53,82 @@ export function ApproveList({ groups }: { groups: LeadGroup[] }) {
 
   return (
     <>
+      <p className="-mb-1 text-center text-[11px] text-muted">
+        Swipe a lead ← to <span className="text-risk">dismiss the whole block</span>
+      </p>
       <div className="flex flex-col gap-3">
         {groups.map((g) => (
-          <details key={g.dealId} className="rounded-card border border-hairline bg-white/[0.05]">
-            <summary className="flex cursor-pointer list-none items-center justify-between p-3">
-              <span className="truncate font-medium">{g.clientName}</span>
-              <span className="ml-2 shrink-0 rounded-full bg-accent/15 px-2 py-0.5 text-xs font-medium text-accent">
-                {g.actions.length} to review
-              </span>
-            </summary>
-            <div className="flex flex-col gap-2 border-t border-hairline p-2">
-              {g.actions.map((a) => (
-                <ActionRow key={a.id} a={a} onEdit={() => setOpen(a)} />
-              ))}
-            </div>
-          </details>
+          <SwipeGroup key={g.dealId} group={g} onEdit={(a) => setOpen(a)} />
         ))}
       </div>
 
       {open && <ActionModal action={open} onClose={() => setOpen(null)} />}
     </>
+  );
+}
+
+// A lead's block: tap to expand, or swipe LEFT to dismiss all of its proposals.
+function SwipeGroup({ group, onEdit }: { group: LeadGroup; onEdit: (a: QueueAction) => void }) {
+  const [dx, setDx] = useState(0);
+  const [swiping, setSwiping] = useState(false);
+  const startX = useRef(0);
+  const startY = useRef(0);
+  const horiz = useRef(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const THRESHOLD = 120;
+
+  function onStart(e: React.TouchEvent) {
+    startX.current = e.touches[0].clientX;
+    startY.current = e.touches[0].clientY;
+    horiz.current = false;
+    setSwiping(true);
+  }
+  function onMove(e: React.TouchEvent) {
+    if (!swiping) return;
+    const x = e.touches[0].clientX - startX.current;
+    const y = e.touches[0].clientY - startY.current;
+    if (Math.abs(x) > Math.abs(y) && Math.abs(x) > 8) horiz.current = true;
+    if (horiz.current && x < 0) setDx(x); // only drag left
+  }
+  function onEnd() {
+    setSwiping(false);
+    if (dx < -THRESHOLD) {
+      formRef.current?.requestSubmit();
+      return; // leave it slid out; the list refreshes
+    }
+    setDx(0);
+  }
+
+  const ids = group.actions.map((a) => a.id).join(",");
+
+  return (
+    <div className="relative overflow-hidden rounded-card">
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-end rounded-card bg-risk/15 pr-5 text-sm font-bold text-risk">
+        {dx < -24 ? "Dismiss ✕" : ""}
+      </div>
+      <details
+        className="relative rounded-card border border-hairline bg-white/[0.05]"
+        style={{ transform: `translateX(${dx}px)`, transition: swiping ? "none" : "transform 0.2s" }}
+        onTouchStart={onStart}
+        onTouchMove={onMove}
+        onTouchEnd={onEnd}
+      >
+        <summary className="flex cursor-pointer list-none items-center justify-between p-3">
+          <span className="truncate font-medium">{group.clientName}</span>
+          <span className="ml-2 shrink-0 rounded-full bg-accent/15 px-2 py-0.5 text-xs font-medium text-accent">
+            {group.actions.length} to review
+          </span>
+        </summary>
+        <div className="flex flex-col gap-2 border-t border-hairline p-2">
+          {group.actions.map((a) => (
+            <ActionRow key={a.id} a={a} onEdit={() => onEdit(a)} />
+          ))}
+        </div>
+      </details>
+      <form ref={formRef} action={dismissGroup} className="hidden">
+        <input type="hidden" name="ids" value={ids} />
+      </form>
+    </div>
   );
 }
 

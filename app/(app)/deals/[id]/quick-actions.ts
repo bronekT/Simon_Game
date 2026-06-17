@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { produceFollowups } from "@/lib/followups";
+import { recordWon } from "@/lib/won";
 
 // Change status right on the deal — no Edit screen needed.
 export async function setStatus(form: FormData) {
@@ -13,9 +14,11 @@ export async function setStatus(form: FormData) {
   if (!id || !status) return;
   const supabase = await createClient();
   await supabase.from("deals").update({ status }).eq("id", id);
+  if (status === "won") await recordWon(supabase, id);
   revalidatePath(`/deals/${id}`);
   revalidatePath("/deals");
   revalidatePath("/");
+  revalidatePath("/earnings");
 }
 
 // Follow-up counter +1 / -1 (never below 0).

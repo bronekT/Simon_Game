@@ -9,6 +9,7 @@ import { MeetingConfirm } from "@/components/DealActions";
 import { FollowupTabs } from "@/components/FollowupTabs";
 import { CaptureForm } from "@/components/CaptureForm";
 import { bumpFollowups, deleteDeal, generateFollowups } from "./quick-actions";
+import { setCommission } from "@/app/(app)/earnings/actions";
 import { emailTemplates, smsTemplates } from "@/lib/templates";
 import { money, titleCase, dateTime, shortDate } from "@/lib/format";
 import { DOOR_LABELS, type Deal } from "@/lib/types";
@@ -181,6 +182,23 @@ export default async function DealDetail({
             <button className="flex h-7 w-7 items-center justify-center rounded-full border border-hairline text-accent active:scale-90">+</button>
           </form>
         </div>
+
+        {/* Commission — empty until you type an amount, then it's saved */}
+        <form action={setCommission} className="mt-3 flex items-center gap-2">
+          <input type="hidden" name="id" value={deal.id} />
+          <span className="text-xs text-muted">Commission</span>
+          <span className="text-xs text-muted">$</span>
+          <input
+            name="commission"
+            type="number"
+            inputMode="decimal"
+            defaultValue={deal.commission ?? ""}
+            placeholder="—"
+            className="w-24 rounded-lg px-2 py-1 text-sm"
+          />
+          <button className="rounded-full border border-hairline px-3 py-1 text-xs text-text">Set</button>
+          {deal.commission == null && <span className="text-[11px] text-muted">not set</span>}
+        </form>
       </header>
 
       {processing && (

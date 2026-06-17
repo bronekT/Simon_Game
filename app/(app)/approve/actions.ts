@@ -84,6 +84,15 @@ export async function dismissAction(form: FormData) {
   revalidatePath("/approve");
 }
 
+// Dismiss a whole lead's block of proposed actions at once (swipe-away).
+export async function dismissGroup(form: FormData) {
+  const ids = String(form.get("ids") ?? "").split(",").filter(Boolean);
+  if (ids.length === 0) return;
+  const supabase = await createClient();
+  await supabase.from("actions_queue").update({ status: "dismissed" }).in("id", ids).eq("status", "proposed");
+  revalidatePath("/approve");
+}
+
 // Retry a failed/approved push (the "Retry" / "Push to Google" button).
 export async function syncAction(form: FormData) {
   const id = String(form.get("id") ?? "");

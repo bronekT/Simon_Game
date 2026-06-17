@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { extract, type SettingsContext } from "./ai/extract";
 import { safeDraftType, type Draft, type Extraction } from "./ai/schema";
 import { chooseMatch, type DealCandidate } from "./match";
+import { recordWon } from "./won";
 import { resolveWhen } from "./datetime";
 import { bookingConfirmation, eventDescription } from "./templates";
 import type { DealStatus } from "./types";
@@ -166,6 +167,7 @@ export async function analyzeAppointment(
   // coaching are produced in a SEPARATE step (produceFollowups) so they never
   // compete with extraction for the function's time budget.
   await applyDealUpdate(supabase, dealId, data);
+  if (data.outcome === "won") await recordWon(supabase, dealId, userId);
   await insertDrafts(supabase, userId, dealId, drafts);
   await enqueueActions(supabase, {
     userId,

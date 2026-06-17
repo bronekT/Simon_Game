@@ -4,8 +4,15 @@ import { Card } from "@/components/Card";
 import { DealCard } from "@/components/DealCard";
 import { SectionHeader } from "@/components/SectionHeader";
 import { HomeMenu } from "@/components/HomeMenu";
-import { money } from "@/lib/format";
+import { money, TZ } from "@/lib/format";
+import { wonDates } from "@/lib/won";
 import { OPEN_STATUSES, dealCommission, type Deal } from "@/lib/types";
+
+const MONTHLY_GOAL = 10_000;
+function monthKey(iso: string): string {
+  const p = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit" }).formatToParts(new Date(iso));
+  return `${p.find((x) => x.type === "year")?.value}-${p.find((x) => x.type === "month")?.value}`;
+}
 
 export const dynamic = "force-dynamic";
 
@@ -27,18 +34,18 @@ export default async function Dashboard() {
   const pipeline = open.reduce((sum, d) => sum + (d.quote_price ?? 0), 0);
   const atRisk = open.filter((d) => (d as Deal & { at_risk?: boolean }).at_risk);
 
-  const now = new Date();
-  const wonThisMonth = all.filter(
-    (d) =>
-      d.status === "won" &&
-      new Date(d.updated_at).getMonth() === now.getMonth() &&
-      new Date(d.updated_at).getFullYear() === now.getFullYear(),
-  );
+  // Won "this month" by the month the deal was actually WON (stable; matches
+  // Earnings), not updated_at which drifts when you edit the deal later.
+  const allWon = all.filter((d) => d.status === "won");
+  const wonAt = await wonDates(supabase, allWon.map((d) => d.id));
+  const thisKey = monthKey(new Date().toISOString());
+  const wonThisMonth = allWon.filter((d) => monthKey(wonAt.get(d.id) ?? d.updated_at) === thisKey);
   const wonValue = wonThisMonth.reduce((s, d) => s + (d.quote_price ?? 0), 0);
-  const goal = settings?.monthly_goal ?? null;
+  const goal = settings?.monthly_goal ?? MONTHLY_GOAL;
   // Per-deal commission (your manual amount, or ~9%) — matches Earnings.
   const myCommission = wonThisMonth.reduce((s, d) => s + dealCommission(d), 0);
-  const goalPct = goal && goal > 0 ? Math.min(100, Math.round((wonValue / goal) * 100)) : null;
+  // Goal is your monthly COMMISSION target ($10k).
+  const goalPct = goal > 0 ? Math.min(100, Math.round((myCommission / goal) * 100)) : null;
 
   // "Money Moves": open deals, highest probability first, then by quote value.
   const moneyMoves = [...open]
@@ -70,7 +77,7 @@ export default async function Dashboard() {
           <p className="text-xs text-muted">Won this month</p>
           <p className="mt-1 text-xl font-semibold text-won">{money(wonValue)}</p>
           <p className="mt-0.5 text-xs text-muted">
-            {goal ? `Goal ${money(goal)}` : "Set a goal in Settings"}
+            {wonThisMonth.length} {wonThisMonth.length === 1 ? "deal" : "deals"} won
           </p>
         </Card>
       </div>
@@ -90,7 +97,7 @@ export default async function Dashboard() {
               <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
                 <div className="h-full rounded-full bg-won" style={{ width: `${goalPct}%` }} />
               </div>
-              <p className="mt-1 text-xs text-muted">{goalPct}% of {money(goal)} sales goal</p>
+              <p className="mt-1 text-xs text-muted">{goalPct}% of {money(goal)} monthly goal</p>
             </>
           )}
         </Card>

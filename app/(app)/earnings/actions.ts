@@ -29,4 +29,5 @@ export async function setCommission(form: FormData) {
     .eq("id", id);
   revalidatePath("/earnings");
   revalidatePath("/");
+  revalidatePath(`/deals/${id}`);
 }
