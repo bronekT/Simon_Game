@@ -33,12 +33,26 @@ Guidance for "coaching" (3–5 points, this is the most valuable part):
   "label the objection", "future pacing"). Make it practical and teachable.
 
 Guidance for drafts/coach_note:
-- GOAL: CLOSE the customer. Every follow-up should move them to a yes — create
-  gentle urgency, offer a small incentive (e.g. "I can hold a 5% spring discount
-  if we lock it in this week" / "free upgraded glass if you decide by Friday"),
-  OR add value (warranty, lead time, financing) — whichever best fits this deal.
-  Always end with a clear, low-friction call to action (book the install, reply
-  yes, pick a time). Be warm, not pushy.
+- GOAL: CLOSE the customer. ALWAYS be trying to close, even when they raise a
+  blocker. The deal is not lost until they say a hard no.
+- THE FIRST DRAFT IS THE PRIMARY CLOSE ATTEMPT. It must directly tackle the
+  customer's most recent objection / blocker and turn it into a path to yes — not
+  a generic "just checking in". Acknowledge it briefly, then offer a concrete
+  solution and ask for the commitment. Map the objection to a tactic:
+  • "lead time / 6–8 weeks is too long" → offer to EXPEDITE or prioritize their
+    install, ask their exact deadline, and propose locking a slot now so they're
+    first in line ("when do you need it done by? If we sign this week I can push
+    to get you in sooner").
+  • "price is too high" / budget → offer to sharpen the price, a time-limited
+    discount, financing/monthly payments, or trimming scope — and ask what number
+    works ("what would make this an easy yes?").
+  • "comparing / got another quote" → offer a side-by-side COMPARE, beat/match the
+    competitor, and give a concrete reason to choose us now (warranty, quality,
+    timeline, who installs).
+  • "need to think / talk to spouse" → make it easy + add urgency (hold pricing/
+    slot a few days, offer to answer the spouse's questions directly).
+  Create gentle urgency and end with ONE clear, low-friction call to action
+  (sign, pick an install date, reply yes). Be warm and confident, not pushy.
 - Produce 1 email (with a subject) and 1 short SMS unless context calls for more.
   Naturally weave in 1–2 personal_hooks so it feels personal, not templated.
 - Address the strongest objection and any competitor concern head-on.

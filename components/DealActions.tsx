@@ -1,5 +1,6 @@
 import { approveAction, dismissAction } from "@/app/(app)/approve/actions";
 import { dateTime } from "@/lib/format";
+import { ActionButton } from "./ActionButton";
 import type { QueueAction } from "./ApproveList";
 
 // Hidden inputs carrying the action's current payload so a server-action submit
@@ -39,12 +40,14 @@ export function MeetingConfirm({ action }: { action: QueueAction }) {
         </div>
         <form className="shrink-0">
           <Payload a={action} />
-          <button
+          <ActionButton
             formAction={approveAction}
-            className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-bg active:scale-95"
+            pendingLabel="Adding…"
+            doneLabel="Added ✓"
+            className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-bg"
           >
             Confirm
-          </button>
+          </ActionButton>
         </form>
       </div>
       <details className="mt-2">

@@ -8,6 +8,7 @@ import { type QueueAction } from "@/components/ApproveList";
 import { MeetingConfirm } from "@/components/DealActions";
 import { FollowupTabs } from "@/components/FollowupTabs";
 import { CaptureForm } from "@/components/CaptureForm";
+import { ActionButton } from "@/components/ActionButton";
 import { bumpFollowups, deleteDeal, generateFollowups } from "./quick-actions";
 import { setCommission } from "@/app/(app)/earnings/actions";
 import { emailTemplates, smsTemplates } from "@/lib/templates";
@@ -196,7 +197,7 @@ export default async function DealDetail({
             placeholder="—"
             className="w-24 rounded-lg px-2 py-1 text-sm"
           />
-          <button className="rounded-full border border-hairline px-3 py-1 text-xs text-text">Set</button>
+          <ActionButton className="rounded-full border border-hairline px-3 py-1 text-xs text-text" pendingLabel="…" doneLabel="Saved ✓">Set</ActionButton>
           {deal.commission == null && <span className="text-[11px] text-muted">not set</span>}
         </form>
       </header>

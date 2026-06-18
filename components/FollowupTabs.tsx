@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { approveAction, dismissAction } from "@/app/(app)/approve/actions";
+import { ActionButton } from "./ActionButton";
 import type { QueueAction } from "./ApproveList";
 import type { FollowupTemplate } from "@/lib/templates";
 
@@ -123,7 +124,7 @@ function DraftRow({ a, channel }: { a: QueueAction; channel: "email" | "sms" }) 
           {channel === "sms" ? (
             <a href={smsLink(p.to, p.body)} className="flex-1 rounded-full bg-won/25 py-2 text-center text-sm font-semibold text-won">📱 Open in Messages</a>
           ) : (
-            <button formAction={approveAction} className="flex-1 rounded-full bg-task/25 py-2 text-sm font-semibold text-task">Approve · Gmail draft</button>
+            <ActionButton formAction={approveAction} pendingLabel="Creating…" doneLabel="Draft created ✓" className="flex-1 rounded-full bg-task/25 py-2 text-sm font-semibold text-task">Approve · Gmail draft</ActionButton>
           )}
           <button formAction={channel === "sms" ? approveAction : dismissAction} className={`rounded-full border border-hairline px-4 py-2 text-sm ${channel === "sms" ? "text-won" : "text-risk"}`}>
             {channel === "sms" ? "Sent ✓" : "✕"}

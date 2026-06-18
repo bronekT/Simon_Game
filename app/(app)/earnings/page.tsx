@@ -4,6 +4,7 @@ import { Card } from "@/components/Card";
 import { money, TZ } from "@/lib/format";
 import { dealCommission, type Deal } from "@/lib/types";
 import { wonDates } from "@/lib/won";
+import { ActionButton } from "@/components/ActionButton";
 import { cyclePayment, setCommission } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -163,11 +164,11 @@ function DealRow({ d }: { d: Deal & { payment_stage?: number } }) {
             placeholder={`${c}`}
             className="w-20 rounded-lg px-2 py-1 text-sm"
           />
-          <button className="rounded-full border border-hairline px-2 py-1 text-[11px] text-text">Set</button>
+          <ActionButton className="rounded-full border border-hairline px-2 py-1 text-[11px] text-text" doneLabel="Saved ✓">Set</ActionButton>
         </form>
         <form action={cyclePayment}>
           <input type="hidden" name="id" value={d.id} />
-          <button className="rounded-full bg-won/20 px-3 py-1.5 text-[11px] font-medium text-won">{next}</button>
+          <ActionButton className="rounded-full bg-won/20 px-3 py-1.5 text-[11px] font-medium text-won" doneLabel="Done ✓">{next}</ActionButton>
         </form>
       </div>
     </div>
