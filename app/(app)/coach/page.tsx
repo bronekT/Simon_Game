@@ -4,6 +4,7 @@ import { unstable_cache } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Card } from "@/components/Card";
+import { CoachReport as CoachReportView } from "@/components/CoachReport";
 import { buildCoachBrief, generateCoachReport, type CoachAppt, type CoachReport } from "@/lib/ai/coach";
 
 export const dynamic = "force-dynamic";
@@ -77,7 +78,7 @@ const getCoachReport = unstable_cache(
     if (rows.length === 0) return null;
     return generateCoachReport(buildCoachBrief(rows, wins, losses));
   },
-  ["coach-report-v1"],
+  ["coach-report-v2"],
   { revalidate: 86400 },
 );
 
@@ -174,6 +175,12 @@ export default async function Coach() {
                 );
               })}
             </div>
+            {perCall.length >= 2 && (
+              <div className="mt-3 border-t border-hairline pt-3">
+                <p className="mb-1 text-[11px] text-muted">Динамика общего уровня (по встречам)</p>
+                <Sparkline values={perCall} />
+              </div>
+            )}
           </Card>
 
           {/* AI report — streams in */}
@@ -200,58 +207,25 @@ async function ReportSection({ userId, token }: { userId: string; token: string 
       </Card>
     );
   }
+  return <CoachReportView report={report} />;
+}
+
+// Tiny inline sparkline of the overall score per call (oldest → newest).
+function Sparkline({ values }: { values: number[] }) {
+  if (values.length < 2) return null;
+  const w = 280;
+  const h = 44;
+  const max = 10;
+  const step = w / (values.length - 1);
+  const pts = values.map((v, i) => [i * step, h - (Math.max(0, Math.min(max, v)) / max) * h]);
+  const d = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
+  const last = pts[pts.length - 1];
   return (
-    <div className="flex flex-col gap-4">
-      {report.progress && (
-        <Section title="📈 Твой прогресс" tone="accent">
-          <p className="whitespace-pre-line text-sm leading-relaxed">{report.progress}</p>
-        </Section>
-      )}
-
-      {report.strengths.length > 0 && (
-        <Section title="💪 Что помогает тебе закрывать" tone="won">
-          <BulletList items={report.strengths} marker="✓" markerClass="text-won" />
-        </Section>
-      )}
-
-      {report.improve.length > 0 && (
-        <Section title="🎯 Над чем поработать" tone="followup">
-          <BulletList items={report.improve} marker="→" markerClass="text-followup" />
-        </Section>
-      )}
-
-      {report.phrases.length > 0 && (
-        <Section title="💬 Фразы, которые стоит использовать" tone="accent">
-          <div className="flex flex-col gap-2.5">
-            {report.phrases.map((p, i) => (
-              <div key={i} className="rounded-xl border border-hairline bg-white/[0.03] p-3">
-                {p.when && <p className="mb-1 text-[11px] uppercase tracking-wide text-muted">{p.when}</p>}
-                <p className="text-sm italic text-text">«{p.say}»</p>
-              </div>
-            ))}
-          </div>
-        </Section>
-      )}
-
-      {report.tricks.length > 0 && (
-        <Section title="🎩 Твои приёмы и техники" tone="accent">
-          <div className="flex flex-col gap-2.5">
-            {report.tricks.map((t, i) => (
-              <div key={i} className="border-l-2 border-accent/40 pl-3">
-                {t.name && <p className="text-sm font-semibold text-accent">{t.name}</p>}
-                {t.how && <p className="mt-0.5 text-sm text-muted">{t.how}</p>}
-              </div>
-            ))}
-          </div>
-        </Section>
-      )}
-
-      {report.product_tips.length > 0 && (
-        <Section title="🚪 Фишки по продукту" tone="won">
-          <BulletList items={report.product_tips} marker="•" markerClass="text-won" />
-        </Section>
-      )}
-    </div>
+    <svg viewBox={`0 0 ${w} ${h}`} className="h-11 w-full" preserveAspectRatio="none">
+      <path d={`${d} L${w},${h} L0,${h} Z`} fill="currentColor" className="text-accent/10" />
+      <path d={d} fill="none" stroke="currentColor" strokeWidth="2" className="text-accent" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={last[0]} cy={last[1]} r="3" className="fill-accent" />
+    </svg>
   );
 }
 
@@ -268,29 +242,6 @@ function ReportSkeleton() {
         ))}
       </div>
     </Card>
-  );
-}
-
-function Section({ title, tone, children }: { title: string; tone: "won" | "followup" | "accent"; children: React.ReactNode }) {
-  const c = tone === "won" ? "text-won" : tone === "followup" ? "text-followup" : "text-accent";
-  return (
-    <Card>
-      <h2 className={`mb-2.5 text-sm font-semibold ${c}`}>{title}</h2>
-      {children}
-    </Card>
-  );
-}
-
-function BulletList({ items, marker, markerClass }: { items: string[]; marker: string; markerClass: string }) {
-  return (
-    <ul className="flex flex-col gap-2">
-      {items.map((it, i) => (
-        <li key={i} className="flex gap-2 text-sm leading-relaxed">
-          <span className={`shrink-0 ${markerClass}`}>{marker}</span>
-          <span>{it}</span>
-        </li>
-      ))}
-    </ul>
   );
 }
 

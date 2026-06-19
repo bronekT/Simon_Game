@@ -138,9 +138,25 @@ real date from meeting_when, so do not stress the arithmetic):
   out) unless a specific date was asked. ISO 8601 w/ offset, or null.
 
 ==================== STEP 4: FILL THE REST ====================
-- scores.* = integers 0–10 rating the salesperson on each skill (rapport,
-  discovery, pain, product, objection-handling, closing, follow-up). Only
-  meaningful for "appointment"/"followup_call"; use 0 for "note".
+- scores = an object with EXACTLY these 7 integer keys (0–10). Score the SKILL the
+  salesperson SHOWED. Do NOT default any score to 0 — give a real rating. Only use
+  0 for a "note", or for a skill that was genuinely never used at all.
+  {
+    "rapport":   building trust / connection / likeability,
+    "discovery": asking good questions to understand needs & situation,
+    "pain":      surfacing the real problem, urgency, the cost of not buying,
+    "product":   presenting the doors / options / value clearly,
+    "objection": handling pushback (price, timeline, spouse, competitor, "let me
+                 think"). IMPORTANT: if NO objection arose, rate how well they
+                 PRE-EMPTED concerns — usually 5–7, NOT 0.
+    "closing":   asking for the sale / commitment / a decision,
+    "followup":  securing the NEXT STEP — locking the next meeting or decision,
+                 creating urgency to continue, getting commitment to proceed.
+                 IMPORTANT: in an appointment this is about closing the loop to
+                 the next step — rate it properly, NOT 0.
+  }
+  objection and followup must reflect the rep's skill even when the event was
+  light — they should almost never be 0 on a real call.
 - talk_ratio = integer PERCENT of time the SALESPERSON spoke (0–100).
 - close_probability = integer 0–100 (0 for note).
 - summary = 2–3 sentences: what they want, their pain, their urgency.
