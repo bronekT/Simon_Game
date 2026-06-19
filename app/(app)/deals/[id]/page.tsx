@@ -2,8 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/Card";
-import { DoorWantLine, EngagementChips } from "@/components/DealMeta";
+import { DoorWantLine } from "@/components/DealMeta";
 import { StatusSelect } from "@/components/StatusSelect";
+import { Count } from "@/components/Count";
+import { Ring } from "@/components/Ring";
 import { type QueueAction } from "@/components/ApproveList";
 import { MeetingConfirm } from "@/components/DealActions";
 import { FollowupTabs } from "@/components/FollowupTabs";
@@ -12,7 +14,7 @@ import { ActionButton } from "@/components/ActionButton";
 import { bumpFollowups, deleteDeal, generateFollowups } from "./quick-actions";
 import { setCommission } from "@/app/(app)/earnings/actions";
 import { emailTemplates, smsTemplates } from "@/lib/templates";
-import { money, titleCase, dateTime, shortDate } from "@/lib/format";
+import { titleCase, dateTime, shortDate } from "@/lib/format";
 import { DOOR_LABELS, type Deal } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -154,52 +156,6 @@ export default async function DealDetail({
             </details>
           </div>
         </div>
-        <div className="mt-2 flex items-start justify-between gap-3">
-          <h1 className="text-2xl font-semibold">{deal.client_name}</h1>
-          <StatusSelect id={deal.id} status={deal.status} />
-        </div>
-        {(deal.door_type || deal.door_count) && (
-          <p className="mt-1.5 text-sm">
-            <DoorWantLine type={deal.door_type} count={deal.door_count} />
-          </p>
-        )}
-        {deal.next_action && (
-          <p className="mt-1 text-sm text-muted">{deal.next_action}</p>
-        )}
-        <EngagementChips deal={deal} className="mt-3" />
-
-        {/* Follow-up counter: how many of ~3 follow-ups you've done */}
-        <div className="mt-3 flex items-center gap-3">
-          <span className="text-xs text-muted">Follow-ups</span>
-          <form action={bumpFollowups}>
-            <input type="hidden" name="id" value={deal.id} />
-            <input type="hidden" name="delta" value="-1" />
-            <button className="flex h-7 w-7 items-center justify-center rounded-full border border-hairline text-muted active:scale-90">−</button>
-          </form>
-          <span className="text-sm font-semibold">{deal.followups_count ?? 0}<span className="text-muted">/3</span></span>
-          <form action={bumpFollowups}>
-            <input type="hidden" name="id" value={deal.id} />
-            <input type="hidden" name="delta" value="1" />
-            <button className="flex h-7 w-7 items-center justify-center rounded-full border border-hairline text-accent active:scale-90">+</button>
-          </form>
-        </div>
-
-        {/* Commission — empty until you type an amount, then it's saved */}
-        <form action={setCommission} className="mt-3 flex items-center gap-2">
-          <input type="hidden" name="id" value={deal.id} />
-          <span className="text-xs text-muted">Commission</span>
-          <span className="text-xs text-muted">$</span>
-          <input
-            name="commission"
-            type="number"
-            inputMode="decimal"
-            defaultValue={deal.commission ?? ""}
-            placeholder="—"
-            className="w-24 rounded-lg px-2 py-1 text-sm"
-          />
-          <ActionButton className="rounded-full border border-hairline px-3 py-1 text-xs text-text" pendingLabel="…" doneLabel="Saved ✓">Set</ActionButton>
-          {deal.commission == null && <span className="text-[11px] text-muted">not set</span>}
-        </form>
       </header>
 
       {processing && (
@@ -218,14 +174,79 @@ export default async function DealDetail({
         </Card>
       )}
 
-      <div className="grid grid-cols-3 gap-3">
-        <Stat label="Quote" value={money(deal.quote_price)} />
-        <Stat
-          label="Probability"
-          value={deal.probability != null ? `${deal.probability}%` : "—"}
-        />
-        <Stat label="Follow up" value={shortDate(deal.followup_at)} />
-      </div>
+      {/* Hero — name, close-meter ring, quote, the Next move, and quick controls */}
+      <Card glow className="flex flex-col gap-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="truncate text-2xl font-semibold tracking-tight">{deal.client_name}</h1>
+            {(deal.door_type || deal.door_count) && (
+              <p className="mt-1 text-sm">
+                <DoorWantLine type={deal.door_type} count={deal.door_count} />
+              </p>
+            )}
+          </div>
+          <StatusSelect id={deal.id} status={deal.status} />
+        </div>
+
+        <div className="flex items-center gap-4">
+          {deal.probability != null && (
+            <Ring pct={deal.probability} size={78} stroke={9}>
+              <span className="text-sm font-bold">{deal.probability}%</span>
+            </Ring>
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="text-xs text-muted">Quote</p>
+            {deal.quote_price != null ? (
+              <Count value={deal.quote_price} money className="block text-3xl font-bold gradient-text" />
+            ) : (
+              <p className="text-2xl font-bold text-muted">—</p>
+            )}
+            <p className="mt-1 text-xs text-muted">
+              {deal.probability != null ? "chance to close · " : ""}follow-up {shortDate(deal.followup_at)}
+            </p>
+          </div>
+        </div>
+
+        {deal.next_action && (
+          <div className="rounded-xl border border-accent/30 bg-accent/[0.08] px-3 py-2.5">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-accent">🎯 Next move</p>
+            <p className="mt-0.5 text-sm">{deal.next_action}</p>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between gap-3 border-t border-hairline pt-3">
+          {/* Follow-up counter */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted">Follow-ups</span>
+            <form action={bumpFollowups}>
+              <input type="hidden" name="id" value={deal.id} />
+              <input type="hidden" name="delta" value="-1" />
+              <button className="flex h-7 w-7 items-center justify-center rounded-full border border-hairline text-muted active:scale-90">−</button>
+            </form>
+            <span className="text-sm font-semibold">{deal.followups_count ?? 0}<span className="text-muted">/3</span></span>
+            <form action={bumpFollowups}>
+              <input type="hidden" name="id" value={deal.id} />
+              <input type="hidden" name="delta" value="1" />
+              <button className="flex h-7 w-7 items-center justify-center rounded-full border border-hairline text-accent active:scale-90">+</button>
+            </form>
+          </div>
+
+          {/* Commission — empty until you type an amount */}
+          <form action={setCommission} className="flex items-center gap-1.5">
+            <input type="hidden" name="id" value={deal.id} />
+            <span className="text-xs text-muted">$</span>
+            <input
+              name="commission"
+              type="number"
+              inputMode="decimal"
+              defaultValue={deal.commission ?? ""}
+              placeholder="комиссия"
+              className="w-24 rounded-lg px-2 py-1 text-sm"
+            />
+            <ActionButton className="rounded-full border border-hairline px-3 py-1 text-xs text-text" pendingLabel="…" doneLabel="✓">Set</ActionButton>
+          </form>
+        </div>
+      </Card>
 
       {/* AI analysis */}
       {appt ? (
@@ -527,15 +548,6 @@ function Pill({ children }: { children: React.ReactNode }) {
     <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-muted">
       {children}
     </span>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <Card className="text-center">
-      <p className="text-xs text-muted">{label}</p>
-      <p className="mt-1 font-semibold">{value}</p>
-    </Card>
   );
 }
 

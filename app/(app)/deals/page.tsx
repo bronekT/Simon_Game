@@ -33,8 +33,11 @@ export default async function DealsList({
   return (
     <main className="flex flex-col gap-4">
       <header className="flex items-center justify-between pt-2">
-        <h1 className="text-2xl font-semibold">Deals</h1>
-        <Link href="/deals/new" className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-bg">
+        <h1 className="text-2xl font-semibold tracking-tight">Deals</h1>
+        <Link
+          href="/deals/new"
+          className="rounded-full bg-accent-grad px-4 py-2 text-sm font-semibold text-bg shadow-[0_6px_18px_-8px_rgba(233,162,59,0.7)] transition active:scale-95"
+        >
           + Add
         </Link>
       </header>
@@ -70,8 +73,12 @@ export default async function DealsList({
         </Card>
       ) : (
         <>
-          <p className="-mb-1 text-center text-[11px] text-muted">
-            Swipe a card → <span className="text-won">Won</span>, ← <span className="text-risk">Lost</span>
+          <p className="-mb-1 flex items-center justify-center gap-1.5 text-center text-[11px] text-muted">
+            <span className="text-risk">← Lost</span>
+            <span className="opacity-50">·</span>
+            <span>swipe a card</span>
+            <span className="opacity-50">·</span>
+            <span className="text-won">Won →</span>
           </p>
           <div className="flex flex-col gap-3">
             {deals.map((d) => (
