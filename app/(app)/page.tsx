@@ -60,10 +60,10 @@ export default async function Dashboard() {
 
   return (
     <main className="flex flex-col gap-5">
-      <header className="flex items-start justify-between pt-2">
+      <header className="relative z-50 flex items-start justify-between pt-2">
         <div>
           <p className="text-sm text-muted">{greeting()}</p>
-          <h1 className="text-2xl font-semibold">Today</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Today</h1>
         </div>
         <HomeMenu />
       </header>

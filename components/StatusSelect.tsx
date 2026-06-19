@@ -7,11 +7,11 @@ import { StatusBadge } from "./StatusBadge";
 // it (each is a real form submit of a server action — no flaky JS).
 export function StatusSelect({ id, status }: { id: string; status: DealStatus }) {
   return (
-    <details className="relative">
+    <details className="relative z-50">
       <summary className="cursor-pointer list-none">
         <StatusBadge status={status} />
       </summary>
-      <div className="absolute right-0 z-10 mt-2 w-44 rounded-card border border-hairline bg-bg p-2 shadow-xl">
+      <div className="glass-strong absolute right-0 z-50 mt-2 w-48 rounded-card border border-hairline p-2 shadow-2xl">
         <div className="flex flex-wrap gap-1.5">
           {DEAL_STATUSES.map((s) => (
             <form action={setStatus} key={s}>

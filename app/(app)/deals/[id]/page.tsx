@@ -129,9 +129,9 @@ export default async function DealDetail({
 
   return (
     <main className="flex flex-col gap-4">
-      <header className="pt-2">
+      <header className="relative z-50 pt-2">
         <div className="flex items-center justify-between">
-          <Link href="/deals" className="text-sm text-accent">
+          <Link href="/deals" className="text-sm font-medium text-accent">
             ← Deals
           </Link>
           <div className="flex items-center gap-2">
@@ -141,11 +141,11 @@ export default async function DealDetail({
             >
               ✎ Edit
             </Link>
-            <details className="relative">
+            <details className="relative z-50">
               <summary className="flex h-7 w-7 cursor-pointer list-none items-center justify-center rounded-full border border-hairline text-muted">
                 ⋯
               </summary>
-              <div className="absolute right-0 z-10 mt-2 w-44 rounded-card border border-hairline bg-bg p-2 shadow-xl">
+              <div className="glass-strong absolute right-0 z-50 mt-2 w-44 rounded-card border border-hairline p-2 shadow-2xl">
                 <form action={deleteDeal}>
                   <input type="hidden" name="id" value={deal.id} />
                   <button className="w-full rounded-lg bg-risk/15 px-3 py-2 text-sm font-medium text-risk">
@@ -175,7 +175,7 @@ export default async function DealDetail({
       )}
 
       {/* Hero — name, close-meter ring, quote, the Next move, and quick controls */}
-      <Card glow className="flex flex-col gap-4">
+      <Card glow className="relative z-40 flex flex-col gap-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h1 className="truncate text-2xl font-semibold tracking-tight">{deal.client_name}</h1>
@@ -252,7 +252,9 @@ export default async function DealDetail({
       {appt ? (
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">AI Analysis</h2>
+            <h2 className="flex items-center gap-2 text-lg font-semibold">
+              <span className="text-base">🧠</span> AI Analysis
+            </h2>
             <span className="text-xs text-muted">{dateTime(appt.created_at)}</span>
           </div>
 
@@ -293,32 +295,44 @@ export default async function DealDetail({
             )
           )}
 
-          {/* Objections + personal hooks */}
-          {((appt.analysis?.objections?.length ?? 0) > 0 ||
-            (appt.analysis?.personal_hooks?.length ?? 0) > 0) && (
-            <Card>
-              {(appt.analysis?.objections?.length ?? 0) > 0 && (
-                <div className="mb-3">
-                  <p className="mb-1.5 text-xs font-semibold text-risk">Objections</p>
-                  <div className="flex flex-wrap gap-2">
-                    {appt.analysis!.objections!.map((o, i) => (
-                      <span key={i} className="rounded-full bg-risk/10 px-2.5 py-0.5 text-xs text-text">{o}</span>
-                    ))}
-                  </div>
+          {/* Objections + personal hooks — always shown so it never feels broken */}
+          {(() => {
+            const objections =
+              (appt.analysis?.objections?.length ?? 0) > 0
+                ? appt.analysis!.objections!
+                : deal.main_objection
+                  ? [deal.main_objection]
+                  : [];
+            const hooks = appt.analysis?.personal_hooks ?? [];
+            return (
+              <Card>
+                <div className="mb-2.5">
+                  <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-risk">
+                    🛡️ Objections to handle
+                  </p>
+                  {objections.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {objections.map((o, i) => (
+                        <span key={i} className="rounded-full bg-risk/12 px-2.5 py-1 text-xs text-text ring-1 ring-risk/20">{o}</span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted">No objections raised — strong sign. Push for the close. 👍</p>
+                  )}
                 </div>
-              )}
-              {(appt.analysis?.personal_hooks?.length ?? 0) > 0 && (
-                <div>
-                  <p className="mb-1.5 text-xs font-semibold text-accent">Personal hooks</p>
-                  <div className="flex flex-wrap gap-2">
-                    {appt.analysis!.personal_hooks!.map((h, i) => (
-                      <span key={i} className="rounded-full bg-accent/10 px-2.5 py-0.5 text-xs text-text">{h}</span>
-                    ))}
+                {hooks.length > 0 && (
+                  <div className="border-t border-hairline pt-2.5">
+                    <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-accent">✨ Personal hooks</p>
+                    <div className="flex flex-wrap gap-2">
+                      {hooks.map((h, i) => (
+                        <span key={i} className="rounded-full bg-accent/10 px-2.5 py-1 text-xs text-text ring-1 ring-accent/20">{h}</span>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
-            </Card>
-          )}
+                )}
+              </Card>
+            );
+          })()}
 
           <ScoreGrid appt={appt} />
 
@@ -480,25 +494,41 @@ function ScoreGrid({ appt }: { appt: Appointment }) {
         ? "Follow-up call scores (/10)"
         : "Call scores (/10)";
 
+  const present = scores.filter((s) => s.value != null) as { label: string; value: number }[];
+  const weakest = [...present].sort((a, b) => a.value - b.value)[0]?.label;
+  const BAR: Record<string, string> = { won: "bg-won", followup: "bg-followup", risk: "bg-risk", muted: "bg-white/20" };
+  const TXT: Record<string, string> = { won: "text-won", followup: "text-followup", risk: "text-risk", muted: "text-muted" };
+  const toneOf = (v: number | null) => (v == null ? "muted" : v >= 7 ? "won" : v >= 4 ? "followup" : "risk");
+
   return (
     <Card>
-      <p className="mb-3 text-xs font-semibold text-muted">{title}</p>
+      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">{title}</p>
       <div className="flex flex-col gap-2.5">
-        {scores.map((s) => (
-          <div key={s.label} className="flex items-center gap-3">
-            <span className="w-20 shrink-0 text-xs text-muted">{s.label}</span>
-            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
-              <div
-                className="h-full rounded-full bg-accent"
-                style={{ width: `${((s.value ?? 0) / 10) * 100}%` }}
-              />
+        {scores.map((s) => {
+          const tone = toneOf(s.value);
+          const weak = s.label === weakest;
+          return (
+            <div key={s.label} className="flex items-center gap-3">
+              <span className={`flex w-24 shrink-0 items-center gap-1 text-xs ${weak ? "text-accent" : "text-muted"}`}>
+                {s.label}
+                {weak && <span title="weakest">⚠️</span>}
+              </span>
+              <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className={`h-full rounded-full ${BAR[tone]} transition-all duration-700`}
+                  style={{ width: `${((s.value ?? 0) / 10) * 100}%` }}
+                />
+              </div>
+              <span className={`w-6 shrink-0 text-right text-xs font-semibold tabular-nums ${TXT[tone]}`}>{s.value ?? "—"}</span>
             </div>
-            <span className="w-6 shrink-0 text-right text-xs">
-              {s.value ?? "—"}
-            </span>
-          </div>
-        ))}
+          );
+        })}
       </div>
+      {weakest && (
+        <p className="mt-3 border-t border-hairline pt-3 text-xs text-muted">
+          Focus next on <span className="font-semibold text-accent">{weakest}</span> — your lowest skill here.
+        </p>
+      )}
     </Card>
   );
 }
@@ -514,13 +544,17 @@ function Disclosure({
   children: React.ReactNode;
 }) {
   const toneClass = tone === "won" ? "text-won" : tone === "risk" ? "text-risk" : "text-accent";
+  const dot = tone === "won" ? "bg-won" : tone === "risk" ? "bg-risk" : "bg-accent";
   return (
-    <details className="group rounded-card border border-hairline bg-white/[0.02]">
+    <details className="group overflow-hidden rounded-card border border-hairline bg-gradient-to-b from-white/[0.05] to-white/[0.01]">
       <summary className="flex cursor-pointer list-none items-center justify-between p-4">
-        <span className={`text-sm font-semibold ${toneClass}`}>{title}</span>
+        <span className={`flex items-center gap-2 text-sm font-semibold ${toneClass}`}>
+          <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
+          {title}
+        </span>
         <span className="text-muted transition-transform group-open:rotate-180">⌄</span>
       </summary>
-      <div className="px-4 pb-4 text-sm text-muted">{children}</div>
+      <div className="px-4 pb-4 text-sm leading-relaxed text-muted">{children}</div>
     </details>
   );
 }
