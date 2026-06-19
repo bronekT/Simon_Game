@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { reprocessAppointment } from "./actions";
 import { Card } from "@/components/Card";
 import { CaptureForm } from "@/components/CaptureForm";
+import { Mascot } from "@/components/Brand";
 import { dateTime } from "@/lib/format";
 import type { Deal } from "@/lib/types";
 
@@ -55,13 +56,16 @@ export default async function Capture({
 
   return (
     <main className="flex flex-col gap-4">
-      <header className="pt-2">
-        <h1 className="text-2xl font-semibold">Capture</h1>
-        <p className="mt-1 text-sm text-muted">
-          Paste a call or meeting transcript. The AI works out what it is — a
-          booking call, a full appointment, a follow-up, or just a note — and
-          handles each correctly.
-        </p>
+      <header className="flex items-start gap-3 pt-2">
+        <Mascot size={52} className="-mt-1 shrink-0" />
+        <div>
+          <h1 className="text-2xl font-semibold">Capture</h1>
+          <p className="mt-1 text-sm text-muted">
+            Paste a call or meeting transcript. The AI works out what it is — a
+            booking call, a full appointment, a follow-up, or just a note — and
+            handles each correctly.
+          </p>
+        </div>
       </header>
 
       {processing && (

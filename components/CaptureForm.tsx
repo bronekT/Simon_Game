@@ -139,7 +139,7 @@ export function CaptureForm({
         <button
           type="submit"
           disabled={phase === "analyzing"}
-          className="rounded-full bg-accent py-3 text-center font-semibold text-bg active:scale-[0.99] disabled:opacity-70"
+          className="rounded-full bg-accent-grad py-3.5 text-center font-semibold text-bg shadow-[0_8px_24px_-10px_rgba(233,162,59,0.7)] transition active:scale-[0.98] disabled:opacity-70"
         >
           {phase === "analyzing" ? "Analyzing…" : dealId ? "Update from this" : "Analyze"}
         </button>

@@ -4,6 +4,8 @@ import { Card } from "@/components/Card";
 import { DealCard } from "@/components/DealCard";
 import { SectionHeader } from "@/components/SectionHeader";
 import { HomeMenu } from "@/components/HomeMenu";
+import { Count } from "@/components/Count";
+import { Ring } from "@/components/Ring";
 import { money, TZ } from "@/lib/format";
 import { wonDates } from "@/lib/won";
 import { OPEN_STATUSES, dealCommission, type Deal } from "@/lib/types";
@@ -66,42 +68,39 @@ export default async function Dashboard() {
         <HomeMenu />
       </header>
 
-      {/* Commission / goal row */}
+      {/* Commission hero — the motivating number, with a goal ring */}
+      <Link href="/earnings">
+        <Card glow className="active:scale-[0.99]">
+          <div className="flex items-center gap-4">
+            <Ring pct={goalPct ?? 0} size={84} stroke={9}>
+              <span className="text-sm font-bold">{goalPct ?? 0}%</span>
+            </Ring>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-muted">Your commission this month</p>
+              <Count value={myCommission} money className="mt-0.5 block text-3xl font-bold gradient-text" />
+              <p className="mt-0.5 text-xs text-muted">
+                {goal ? <>of <b className="text-text">{money(goal)}</b> goal</> : "Set a goal"} · tap for Earnings ›
+              </p>
+            </div>
+          </div>
+        </Card>
+      </Link>
+
+      {/* Pipeline / won row */}
       <div className="grid grid-cols-2 gap-3">
         <Card>
           <p className="text-xs text-muted">Open pipeline</p>
-          <p className="mt-1 text-xl font-semibold">{money(pipeline)}</p>
+          <Count value={pipeline} money className="mt-1 block text-xl font-semibold" />
           <p className="mt-0.5 text-xs text-muted">{open.length} open deals</p>
         </Card>
         <Card>
           <p className="text-xs text-muted">Won this month</p>
-          <p className="mt-1 text-xl font-semibold text-won">{money(wonValue)}</p>
+          <Count value={wonValue} money className="mt-1 block text-xl font-semibold gradient-won" />
           <p className="mt-0.5 text-xs text-muted">
             {wonThisMonth.length} {wonThisMonth.length === 1 ? "deal" : "deals"} won
           </p>
         </Card>
       </div>
-
-      {/* Commission tracker — tap for the full Earnings view */}
-      <Link href="/earnings">
-        <Card className="active:bg-white/[0.05]">
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-muted">Commission this month</p>
-            <div className="flex items-center gap-1.5">
-              <p className="text-sm font-semibold">{money(myCommission)}</p>
-              <span className="text-muted">›</span>
-            </div>
-          </div>
-          {goalPct != null && (
-            <>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
-                <div className="h-full rounded-full bg-won" style={{ width: `${goalPct}%` }} />
-              </div>
-              <p className="mt-1 text-xs text-muted">{goalPct}% of {money(goal)} monthly goal</p>
-            </>
-          )}
-        </Card>
-      </Link>
 
       {/* At-risk alerts */}
       {atRisk.length > 0 && (

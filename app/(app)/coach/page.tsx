@@ -7,6 +7,7 @@ import { Card } from "@/components/Card";
 import { CoachReport as CoachReportView } from "@/components/CoachReport";
 import { CoachTabs } from "@/components/CoachTabs";
 import { ActionButton } from "@/components/ActionButton";
+import { Mascot } from "@/components/Brand";
 import { reviewMeeting } from "./actions";
 import { shortDate } from "@/lib/format";
 import { buildCoachBrief, generateCoachReport, type CoachAppt, type CoachReport } from "@/lib/ai/coach";
@@ -158,8 +159,9 @@ export default async function Coach() {
       </p>
 
       {appts.length === 0 ? (
-        <Card>
-          <p className="text-sm text-muted">
+        <Card className="flex flex-col items-center gap-3 py-8 text-center">
+          <Mascot size={96} />
+          <p className="max-w-xs text-sm text-muted">
             Пока нет разобранных встреч. Загрузи несколько транскриптов в{" "}
             <Link href="/capture" className="text-accent">Capture</Link> — и здесь
             появится твой персональный разбор и динамика.
@@ -329,13 +331,13 @@ function Sparkline({ values }: { values: number[] }) {
 function ReportSkeleton() {
   return (
     <Card>
-      <div className="flex items-center gap-2">
-        <span className="text-lg">🧠</span>
+      <div className="flex items-center gap-3">
+        <Mascot size={48} />
         <p className="text-sm text-muted">Анализирую всю твою историю…</p>
       </div>
       <div className="mt-3 flex flex-col gap-2">
         {[90, 80, 95, 70].map((w, i) => (
-          <div key={i} className="h-3 animate-pulse rounded-full bg-white/[0.06]" style={{ width: `${w}%` }} />
+          <div key={i} className="h-3 rounded-full shimmer" style={{ width: `${w}%` }} />
         ))}
       </div>
     </Card>

@@ -62,3 +62,113 @@ textarea::placeholder {
 select option {
   background-color: #0a0a0c;
 }
+
+/* ============================================================================
+   Visual system — Apple-style dark, warm gold accent, glass + soft gradients
+   ============================================================================ */
+
+/* Ambient gradient backdrop (fixed, behind everything) */
+body {
+  background:
+    radial-gradient(1100px 620px at 50% -12%, rgba(233, 162, 59, 0.12), transparent 60%),
+    radial-gradient(820px 520px at 108% 4%, rgba(91, 141, 239, 0.07), transparent 55%),
+    radial-gradient(720px 520px at -10% 18%, rgba(63, 208, 137, 0.05), transparent 55%),
+    #0a0a0c;
+  background-attachment: fixed;
+}
+
+@layer utilities {
+  .gradient-text {
+    background: linear-gradient(135deg, #ffe6a8 0%, #e9a23b 52%, #c97f28 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+  .gradient-won {
+    background: linear-gradient(135deg, #8affc4 0%, #3fd089 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .glass {
+    background: rgba(255, 255, 255, 0.055);
+    backdrop-filter: blur(18px) saturate(150%);
+    -webkit-backdrop-filter: blur(18px) saturate(150%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  .glass-strong {
+    background: rgba(20, 20, 24, 0.72);
+    backdrop-filter: blur(22px) saturate(150%);
+    -webkit-backdrop-filter: blur(22px) saturate(150%);
+  }
+  .glow-accent {
+    box-shadow: 0 10px 40px -14px rgba(233, 162, 59, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+  .glow-won {
+    box-shadow: 0 10px 40px -16px rgba(63, 208, 137, 0.5);
+  }
+  .bg-accent-grad {
+    background-image: linear-gradient(135deg, #f3b455 0%, #e9a23b 55%, #cf8a2c 100%);
+  }
+  .animate-float {
+    animation: float 4.5s ease-in-out infinite;
+  }
+  .animate-pop {
+    animation: pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.04) 25%,
+      rgba(255, 255, 255, 0.11) 37%,
+      rgba(255, 255, 255, 0.04) 63%
+    );
+    background-size: 400% 100%;
+    animation: sheen 1.5s ease infinite;
+  }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pop {
+  0% { opacity: 0; transform: scale(0.82); }
+  60% { transform: scale(1.04); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+@keyframes sheen {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+/* Staggered, Apple-like entrance for the content of every screen */
+main > * {
+  animation: fadeUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+main > *:nth-child(2) { animation-delay: 0.04s; }
+main > *:nth-child(3) { animation-delay: 0.08s; }
+main > *:nth-child(4) { animation-delay: 0.12s; }
+main > *:nth-child(5) { animation-delay: 0.16s; }
+main > *:nth-child(n + 6) { animation-delay: 0.2s; }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+details > *:not(summary) {
+  animation: fadeUp 0.22s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  main > *, details > *:not(summary), .animate-float, .animate-pop { animation: none !important; }
+}
