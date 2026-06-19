@@ -138,9 +138,22 @@ real date from meeting_when, so do not stress the arithmetic):
   out) unless a specific date was asked. ISO 8601 w/ offset, or null.
 
 ==================== STEP 4: FILL THE REST ====================
+SCORING CONTEXT (read first):
+- A recording often contains the rep talking to THEMSELVES — planning BEFORE the
+  meeting ("my plan is to upsell sidelights…") and a debrief AFTER ("that went
+  well, I should've…"). These are NOT the conversation with the customer. Score
+  ONLY the LIVE interaction with the customer (the part where the customer
+  actually speaks/responds). Never count the rep's solo plans or self-criticism
+  as things they did or failed to do with the client — use them only as helpful
+  context. The customer's own lines mark the real conversation.
+- BE OUTCOME-AWARE AND FAIR. The result is evidence of skill:
+  • If the customer committed / bought / agreed to proceed (outcome "won") or the
+    deal clearly advanced, then closing and the overall approach LARGELY WORKED —
+    closing should be high (7–10) and the tone should be encouraging, not harsh.
+  • If the deal was lost or stalled, be more critical about what to fix.
+  • 5–6 is an AVERAGE rep. Reserve 0–3 for genuine failures only. Don't be stingy.
 - scores = an object with EXACTLY these 7 integer keys (0–10). Score the SKILL the
-  salesperson SHOWED. Do NOT default any score to 0 — give a real rating. Only use
-  0 for a "note", or for a skill that was genuinely never used at all.
+  salesperson SHOWED in the live conversation. Do NOT default any score to 0.
   {
     "rapport":   building trust / connection / likeability,
     "discovery": asking good questions to understand needs & situation,
@@ -149,19 +162,22 @@ real date from meeting_when, so do not stress the arithmetic):
     "objection": handling pushback (price, timeline, spouse, competitor, "let me
                  think"). IMPORTANT: if NO objection arose, rate how well they
                  PRE-EMPTED concerns — usually 5–7, NOT 0.
-    "closing":   asking for the sale / commitment / a decision,
-    "followup":  securing the NEXT STEP — locking the next meeting or decision,
-                 creating urgency to continue, getting commitment to proceed.
-                 IMPORTANT: in an appointment this is about closing the loop to
-                 the next step — rate it properly, NOT 0.
+    "closing":   asking for the sale / commitment / a decision. If the customer
+                 committed, this is high.
+    "followup":  securing the NEXT STEP — locking the next meeting/decision,
+                 creating urgency, getting commitment to proceed. If a deal closed
+                 on the spot, the next step is the install/paperwork — still rate
+                 it properly, NOT 0.
   }
   objection and followup must reflect the rep's skill even when the event was
   light — they should almost never be 0 on a real call.
-- talk_ratio = integer PERCENT of time the SALESPERSON spoke (0–100).
-- close_probability = integer 0–100 (0 for note).
+- talk_ratio = integer PERCENT of time the SALESPERSON spoke (0–100), based on the
+  LIVE conversation only (ignore solo prep/debrief).
+- close_probability = integer 0–100 (0 for note). If already won, use 100.
 - summary = 2–3 sentences: what they want, their pain, their urgency.
 - what_went_well / what_went_wrong = SPECIFIC, behavioral coaching tied to THIS
-  call (quote exact moments). Not generic advice. For "note", use "" for both.
+  call (quote exact moments from the LIVE conversation). Be fair — if the deal
+  closed, lead with what worked. Not generic advice. For "note", use "" for both.
 - personal_hooks = concrete personal details to make follow-ups feel personal
   (kids' names, vacation, renovation reason, pets, deadlines).
 - followup_at / proposed_event.start = ISO 8601 datetimes, or null.
