@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/Card";
 import { addTask, toggleTask, deleteTask, pushTaskToCalendar } from "./actions";
 import { shortDate, titleCase } from "@/lib/format";
+import { isNoteRow } from "@/lib/notes";
 import { googleConfigured } from "@/lib/google/oauth";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +23,7 @@ export default async function Tasks() {
     .from("tasks")
     .select("id, type, description, due_at, done, calendar_event_id")
     .order("due_at", { ascending: true, nullsFirst: false });
-  const tasks = (data ?? []) as Task[];
+  const tasks = (data ?? []).filter((t) => !isNoteRow(t.description as string | null)) as Task[];
 
   // Upcoming follow-ups from deals (agenda), next 5.
   const { data: followups } = await supabase

@@ -8,6 +8,7 @@ const ITEMS = [
   { href: "/calls", label: "Calls", icon: PhoneIcon },
   { href: "/deals", label: "Deals", icon: DealsIcon },
   { href: "/approve", label: "Approve", icon: ApproveIcon },
+  { href: "/notes", label: "Notes", icon: NotesIcon },
   { href: "/capture", label: "Capture", icon: CaptureIcon },
 ];
 
@@ -76,6 +77,16 @@ function ApproveIcon() {
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M9 11l3 3L22 4" />
       <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+    </svg>
+  );
+}
+
+function NotesIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 3h11l3 3v15a0 0 0 0 1 0 0H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" />
+      <path d="M15 3v4h4" />
+      <path d="M8 12h7M8 16h5" />
     </svg>
   );
 }
