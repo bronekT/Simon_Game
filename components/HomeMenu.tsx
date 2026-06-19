@@ -6,7 +6,7 @@ export function HomeMenu() {
   const items = [
     { href: "/tasks", label: "Plan" },
     { href: "/earnings", label: "Earnings" },
-    { href: "/coach", label: "Coach" },
+    { href: "/coach", label: "Коуч" },
     { href: "/settings", label: "Settings" },
   ];
   return (
