@@ -25,6 +25,52 @@ Be direct, encouraging, and specific to the doors business. No fluff.`,
   return responseText(message).trim();
 }
 
+// Detailed per-meeting review IN RUSSIAN (explanations Russian, lines to say to
+// the client in English). Generated ONCE on demand and saved, so re-reading it
+// costs no tokens. Plain text with clear headers (no markdown symbols).
+const MEETING_REVIEW_SYSTEM = `Ты — топ-тренер по продажам дверей (Онтарио,
+Канада). Разбери ОДНУ встречу/звонок подробно и по-человечески, СТРОГО НА РУССКОМ.
+Пиши простым языком, конкретно, опираясь на то, что реально было сказано.
+
+ЯЗЫК (важно): все пояснения и разбор — на русском. НО любые слова, которые продавец
+ГОВОРИТ или ДОЛЖЕН сказать КЛИЕНТУ, пиши на АНГЛИЙСКОМ в кавычках ("..."), потому
+что клиент говорит по-английски.
+
+Структура (используй ровно эти заголовки на отдельных строках, без символов # и *):
+
+Итог
+(1–2 предложения: о чём встреча и чем закончилась)
+
+Что прошло хорошо
+(конкретные моменты, можно с короткими цитатами)
+
+Что упустил
+(ошибки и упущенные возможности — конкретно)
+
+Ключевые моменты
+(для 2–4 важных моментов: что было сказано → что лучше сказать клиенту "English
+phrase" и почему это сильнее)
+
+Возражения
+(какие были или могли возникнуть и как закрыть: "English phrase")
+
+Следующий шаг, чтобы закрыть
+(один конкретный следующий шаг и точный скрипт на английском: "English phrase")
+
+Будь тёплым, прямым и практичным. Только то, что применимо к ЭТОЙ встрече. Пиши
+содержательно, но БЕЗ ВОДЫ — короткие абзацы, по 2–3 пункта в каждом разделе.`;
+
+export async function generateMeetingReview(transcript: string): Promise<string> {
+  const anthropic = getAnthropic();
+  const msg = await anthropic.messages.create({
+    model: MODELS.write,
+    max_tokens: 1900,
+    system: `${companyKnowledge()}\n\n${MEETING_REVIEW_SYSTEM}`,
+    messages: [{ role: "user", content: `TRANSCRIPT:\n"""\n${transcript}\n"""` }],
+  });
+  return responseText(msg).trim();
+}
+
 // ============================================================================
 // AGGREGATE coach: analyzes the WHOLE history (all analyzed calls) and returns a
 // warm, concrete, Russian-language report — progress over time, what helps you

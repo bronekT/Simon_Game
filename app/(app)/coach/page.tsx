@@ -5,6 +5,10 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Card } from "@/components/Card";
 import { CoachReport as CoachReportView } from "@/components/CoachReport";
+import { CoachTabs } from "@/components/CoachTabs";
+import { ActionButton } from "@/components/ActionButton";
+import { reviewMeeting } from "./actions";
+import { shortDate } from "@/lib/format";
 import { buildCoachBrief, generateCoachReport, type CoachAppt, type CoachReport } from "@/lib/ai/coach";
 
 export const dynamic = "force-dynamic";
@@ -97,6 +101,25 @@ export default async function Coach() {
     .order("occurred_at", { ascending: true });
   const appts = (apptData ?? []) as Row[];
 
+  // Meetings list (newest first) — each with its saved Russian review, if any.
+  const { data: meetData } = await supabase
+    .from("appointments")
+    .select("id, occurred_at, created_at, record_type, summary, deal_id, deals(client_name), analysis")
+    .not("record_type", "is", null)
+    .neq("record_type", "note")
+    .order("created_at", { ascending: false })
+    .limit(60);
+  const meetings: Meeting[] = (meetData ?? []).map((m) => ({
+    id: m.id as string,
+    date: (m.occurred_at as string) ?? (m.created_at as string),
+    type: (m.record_type as string) ?? null,
+    summary: (m.summary as string) ?? null,
+    dealId: (m.deal_id as string) ?? null,
+    client:
+      (Array.isArray(m.deals) ? m.deals[0]?.client_name : (m.deals as { client_name?: string } | null)?.client_name) ?? null,
+    review: ((m.analysis as Record<string, unknown> | null)?.ru_review as string) ?? null,
+  }));
+
   const { data: outcomeData } = await supabase.from("outcomes").select("result");
   const outcomes = outcomeData ?? [];
   const won = outcomes.filter((o) => o.result === "won").length;
@@ -143,7 +166,10 @@ export default async function Coach() {
           </p>
         </Card>
       ) : (
-        <>
+        <CoachTabs
+          meetings={<MeetingsList meetings={meetings} />}
+          overview={
+            <>
           {/* Snapshot */}
           <div className="grid grid-cols-3 gap-3">
             <Stat label="Разобрано" value={String(appts.length)} />
@@ -189,9 +215,80 @@ export default async function Coach() {
               <ReportSection userId={user.id} token={token} />
             </Suspense>
           )}
-        </>
+            </>
+          }
+        />
       )}
     </main>
+  );
+}
+
+interface Meeting {
+  id: string;
+  date: string;
+  type: string | null;
+  summary: string | null;
+  dealId: string | null;
+  client: string | null;
+  review: string | null;
+}
+
+const TYPE_RU: Record<string, string> = {
+  appointment: "Встреча",
+  booking_call: "Запись",
+  followup_call: "Дожим",
+};
+
+// "По встречам": each meeting saved like a chat thread — open to read its detailed
+// Russian review, or generate it once (then it's stored, free to re-read).
+function MeetingsList({ meetings }: { meetings: Meeting[] }) {
+  if (meetings.length === 0) {
+    return (
+      <Card>
+        <p className="text-sm text-muted">Пока нет встреч для разбора. Загрузи транскрипт в Capture.</p>
+      </Card>
+    );
+  }
+  return (
+    <>
+      <p className="px-1 text-[11px] text-muted">
+        Детальный разбор каждой встречи на русском. Создаётся один раз и сохраняется — потом читается без затрат токенов.
+      </p>
+      {meetings.map((m) => (
+        <details key={m.id} className="rounded-card border border-hairline bg-white/[0.04]">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 p-3">
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="truncate text-sm font-medium">{m.client ?? "Без имени"}</span>
+              {m.type && <span className="shrink-0 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-medium text-accent">{TYPE_RU[m.type] ?? m.type}</span>}
+            </span>
+            <span className="flex shrink-0 items-center gap-2 text-[11px] text-muted">
+              {m.review && <span className="text-won">✓ разобрано</span>}
+              {shortDate(m.date)}
+              <span>⌄</span>
+            </span>
+          </summary>
+          <div className="border-t border-hairline p-3">
+            {m.review ? (
+              <p className="whitespace-pre-line text-sm leading-relaxed">{m.review}</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {m.summary && <p className="text-sm text-muted">{m.summary}</p>}
+                <form action={reviewMeeting}>
+                  <input type="hidden" name="id" value={m.id} />
+                  <ActionButton
+                    pendingLabel="Разбираю встречу… (~30 сек)"
+                    doneLabel="Готово ✓ — открой снова"
+                    className="w-full rounded-full bg-accent/15 py-2.5 text-sm font-semibold text-accent"
+                  >
+                    🧠 Разобрать эту встречу детально
+                  </ActionButton>
+                </form>
+              </div>
+            )}
+          </div>
+        </details>
+      ))}
+    </>
   );
 }
 
