@@ -104,24 +104,81 @@ async function propagateName(
   }
 }
 
+// Literal (non-regex) replace — for phone numbers / emails written into text.
+function replaceLiteral(text: string | null | undefined, oldV: string, newV: string): string | null {
+  if (!text) return text ?? null;
+  if (!oldV || oldV === newV) return text;
+  return text.split(oldV).join(newV);
+}
+
+// When the phone/email changes, point every queued follow-up at the NEW contact
+// (the email/SMS recipient) and fix any number/address written into the text —
+// so "I changed the phone" really does update all the follow-ups.
+async function propagateContact(
+  dealId: string,
+  c: { oldPhone: string | null; newPhone: string | null; oldEmail: string | null; newEmail: string | null },
+) {
+  const phoneChanged = !!c.newPhone && c.newPhone !== c.oldPhone;
+  const emailChanged = !!c.newEmail && c.newEmail !== c.oldEmail;
+  if (!phoneChanged && !emailChanged) return;
+  const supabase = createAdminClient();
+
+  const { data: acts } = await supabase
+    .from("actions_queue")
+    .select("id, kind, payload")
+    .eq("deal_id", dealId)
+    .in("kind", ["email", "sms"]);
+  for (const a of acts ?? []) {
+    const p = { ...((a.payload as Record<string, unknown>) ?? {}) };
+    if (a.kind === "sms" && phoneChanged) p.to = c.newPhone;
+    if (a.kind === "email" && emailChanged) p.to = c.newEmail;
+    if (phoneChanged && c.oldPhone) p.body = replaceLiteral(p.body as string | null, c.oldPhone, c.newPhone!);
+    if (emailChanged && c.oldEmail) {
+      p.body = replaceLiteral(p.body as string | null, c.oldEmail, c.newEmail!);
+      p.subject = replaceLiteral(p.subject as string | null, c.oldEmail, c.newEmail!);
+    }
+    await supabase.from("actions_queue").update({ payload: p }).eq("id", a.id);
+  }
+
+  const { data: drafts } = await supabase.from("drafts").select("id, subject, body").eq("deal_id", dealId);
+  for (const d of drafts ?? []) {
+    let body = d.body as string | null;
+    let subject = d.subject as string | null;
+    if (phoneChanged && c.oldPhone) body = replaceLiteral(body, c.oldPhone, c.newPhone!);
+    if (emailChanged && c.oldEmail) {
+      body = replaceLiteral(body, c.oldEmail, c.newEmail!);
+      subject = replaceLiteral(subject, c.oldEmail, c.newEmail!);
+    }
+    await supabase.from("drafts").update({ subject, body }).eq("id", d.id);
+  }
+}
+
 export async function updateDeal(form: FormData) {
   const id = String(form.get("id") ?? "");
   if (!id) return;
 
   const supabase = await createClient();
 
-  // Grab the previous name first so we can propagate a rename to follow-ups.
-  const { data: prev } = await supabase.from("deals").select("client_name").eq("id", id).maybeSingle();
+  // Grab the previous contact details so we can propagate any change.
+  const { data: prev } = await supabase
+    .from("deals")
+    .select("client_name, phone, email")
+    .eq("id", id)
+    .maybeSingle();
   const oldName = (prev?.client_name as string | null) ?? "";
   const newName = str(form, "client_name") ?? "Unnamed";
+  const oldPhone = (prev?.phone as string | null) ?? null;
+  const oldEmail = (prev?.email as string | null) ?? null;
+  const newPhone = str(form, "phone");
+  const newEmail = str(form, "email");
 
   await supabase
     .from("deals")
     .update({
       client_name: newName,
       address: str(form, "address"),
-      phone: str(form, "phone"),
-      email: str(form, "email"),
+      phone: newPhone,
+      email: newEmail,
       door_type: str(form, "door_type"),
       door_count: num(form, "door_count"),
       status: str(form, "status") ?? "new",
@@ -137,8 +194,9 @@ export async function updateDeal(form: FormData) {
     })
     .eq("id", id);
 
-  // Rename inside drafts + queued follow-ups so they greet the right person.
+  // Propagate name + contact changes into all follow-ups / drafts / analysis.
   await propagateName(id, oldName, newName);
+  await propagateContact(id, { oldPhone, newPhone, oldEmail, newEmail });
 
   if ((str(form, "status") ?? "new") === "won") await recordWon(supabase, id);
 
