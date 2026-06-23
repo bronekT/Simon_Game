@@ -133,31 +133,52 @@ export default async function Settings({
         </Card>
       </section>
 
-      {/* Home-screen widget (Phase 5) */}
+      {/* Home-screen widget */}
       <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold text-muted">Home-screen widget</h2>
+        <h2 className="text-sm font-semibold text-muted">📱 iPhone widget — commission</h2>
         <Card>
           {s?.widget_token ? (
             <>
               <p className="text-xs text-muted">
-                Read-only link for a Scriptable widget (top-3 moves, next
-                appointment, pipeline). Keep it private.
+                A home-screen widget showing your commission this month, goal
+                progress, what&apos;s owed &amp; pipeline — styled like the app and
+                auto-refreshing. Uses the free <b className="text-text">Scriptable</b> app.
               </p>
-              <p className="mt-2 break-all rounded-lg bg-white/5 p-2 text-xs">
-                {`${appUrl}/api/widget?token=${s.widget_token}`}
-              </p>
-              <form action={generateWidgetToken} className="mt-2">
+
+              <ol className="mt-3 flex list-decimal flex-col gap-1.5 pl-4 text-xs text-text">
+                <li>Install <b>Scriptable</b> from the App Store.</li>
+                <li>
+                  Open this script, copy all of it into a new Scriptable script named “CLOSER”:
+                  <a className="mt-1 block break-all rounded-lg bg-white/5 p-2 text-accent" href={`${appUrl}/widget.js`}>
+                    {`${appUrl}/widget.js`}
+                  </a>
+                </li>
+                <li>Home screen → long-press → ＋ → Scriptable → add a <b>medium</b> widget.</li>
+                <li>Long-press the widget → <b>Edit Widget</b> → Script: CLOSER → in <b>Parameter</b> paste your token below.</li>
+              </ol>
+
+              <p className="mt-3 text-[11px] text-muted">Your private token (paste into the widget Parameter):</p>
+              <p className="mt-1 break-all rounded-lg bg-white/5 p-2 text-xs font-mono">{s.widget_token}</p>
+
+              <details className="mt-2">
+                <summary className="cursor-pointer list-none text-[11px] text-muted">Show raw data link</summary>
+                <p className="mt-1 break-all rounded-lg bg-white/5 p-2 text-[11px]">
+                  {`${appUrl}/api/widget?token=${s.widget_token}`}
+                </p>
+              </details>
+
+              <form action={generateWidgetToken} className="mt-3">
                 <button className="rounded-full border border-hairline px-3 py-1.5 text-xs text-text">
-                  Regenerate (invalidates old link)
+                  Regenerate token (invalidates the old one)
                 </button>
               </form>
             </>
           ) : (
             <div className="flex items-center justify-between gap-3">
-              <p className="text-sm text-muted">No widget link yet.</p>
+              <p className="text-sm text-muted">Turn on the home-screen commission widget.</p>
               <form action={generateWidgetToken}>
-                <button className="rounded-full bg-accent px-4 py-1.5 text-xs font-medium text-bg">
-                  Generate link
+                <button className="rounded-full bg-accent-grad px-4 py-1.5 text-xs font-semibold text-bg">
+                  Generate token
                 </button>
               </form>
             </div>
